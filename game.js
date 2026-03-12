@@ -114,7 +114,7 @@ function startGame(){
   initDiplo();
   G.owner=PROVINCES.map(p=>p.nation??-1);
   G.pop=PROVINCES.map(p=>p.isCapital?ri(800000,3000000):ri(200000,1500000));
-  G.army=PROVINCES.map(()=>ri(3000,12000));
+  G.army=PROVINCES.map(()=>0);
   G.income=PROVINCES.map(p=>p.isCapital?ri(120,280):ri(40,130));
   G.instab=PROVINCES.map(()=>0);
   G.assim=PROVINCES.map(()=>100);
@@ -129,7 +129,15 @@ function startGame(){
   G.moveFrom=-1;G.moveMode=false;G.navalMode=false;G.navalFrom=-1;G.sel=-1;
   G.gold[SC]=1200;
   NATIONS.forEach((_,i)=>{if(i!==SC)G.gold[i]=ri(400,900);});
-  regsOf(SC).forEach(i=>{G.army[i]+=3000;});
+  // Player starts with army only in capital
+  const playerCapIdx = PROVINCES.findIndex(p=>p.isCapital&&p.nation===SC);
+  if(playerCapIdx>=0) G.army[playerCapIdx]=ri(8000,12000);
+  // AI nations get small garrison in their capitals only
+  NATIONS.forEach((_,i)=>{
+    if(i===SC)return;
+    const capIdx=PROVINCES.findIndex(p=>p.isCapital&&p.nation===i);
+    if(capIdx>=0)G.army[capIdx]=ri(4000,10000);
+  });
   show('game');
   setTimeout(()=>{
     computeHexRadius();
@@ -189,7 +197,7 @@ function hexPath(ctx2,cx,cy,r){
   ctx2.beginPath();
   for(let i=0;i<6;i++){
     const a=Math.PI/3*i-Math.PI/6;
-    const x=cx+Math.cos(a)*r*1.05,y=cy+Math.sin(a)*r*0.9;
+    const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;
     i===0?ctx2.moveTo(x,y):ctx2.lineTo(x,y);
   }
   ctx2.closePath();
@@ -290,19 +298,24 @@ function drawMap(){
       const r=scaledR(i);
       const fs=Math.max(3,Math.min(7,r*.42));
 
-      // Province name
-      ctx.font=`600 ${fs}px Cinzel,serif`;
-      ctx.fillStyle=p.isCapital?'#f0d080':'rgba(232,213,163,.9)';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=3;
-      ctx.fillText(p.short.length>8?p.short.slice(0,8):p.short,p.cx,p.cy-(G.army[i]>0?2:0));
-      ctx.shadowBlur=0;
+      // Province name — only capitals shown on map
+      if(p.isCapital){
+        ctx.font=`700 ${fs*1.1}px Cinzel,serif`;
+        ctx.fillStyle='#f0d080';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.shadowColor='rgba(0,0,0,.95)';ctx.shadowBlur=4;
+        ctx.fillText(p.short.length>8?p.short.slice(0,8):p.short,p.cx,p.cy-(G.army[i]>0&&vp.scale>1.2?2:0));
+        ctx.shadowBlur=0;
+      }
 
-      // Army count
-      if(G.army[i]>0){
+      // Army count — only when zoomed in enough (scale > 1.2)
+      if(G.army[i]>0&&vp.scale>1.2){
         ctx.font=`${Math.max(3.5,fs-1.5)}px Cinzel,serif`;
-        ctx.fillStyle='rgba(232,205,145,.8)';
-        ctx.fillText(fm(G.army[i]),p.cx,p.cy+fs*.7);
+        ctx.fillStyle='rgba(232,205,145,.85)';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=2;
+        ctx.fillText(fm(G.army[i]),p.cx,p.cy+(p.isCapital?fs*.8:0));
+        ctx.shadowBlur=0;
       }
 
       // Capital star
