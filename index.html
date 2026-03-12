@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Time of Conquest 1936</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c9a84c;--gold2:#f0d080;--dark:#06080e;--panel:#0e1018;--panel2:#141820;--border:#2a2418;--border2:#4a3e28;--text:#e8d5a3;--dim:#8a7848;--red:#8a1818;--red2:#cc3030;--green:#1a6a18;--green2:#40a830}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--dark);color:var(--text);font-family:'IM Fell English',serif;display:flex;flex-direction:column;height:100dvh}
+.scr{display:none;flex-direction:column;flex:1;overflow:hidden}
+.scr.on{display:flex}
+.btn{padding:9px 20px;background:linear-gradient(180deg,#1e1408,#100a04);border:1px solid var(--gold);color:var(--gold);font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn:hover{background:rgba(201,168,76,.1);box-shadow:0 0 16px rgba(201,168,76,.2)}
+.btn:active{transform:scale(.96)}
+.btn.full{width:100%;text-align:center}
+.btn.red{border-color:#b03030;color:#ff7070}
+.btn.grn{border-color:#307830;color:#70e870}
+.btn.dim{border-color:#333;color:#666}
+
+/* INTRO */
+#s-intro{align-items:center;justify-content:center;gap:16px;padding:24px;
+  background:radial-gradient(ellipse at center,rgba(201,168,76,.07) 0%,transparent 60%),
+  repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(201,168,76,.015) 40px),
+  repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(201,168,76,.015) 40px),#06080e}
+.i-year{font-family:'Cinzel Decorative',serif;font-size:clamp(58px,14vw,108px);color:var(--gold);line-height:1;text-shadow:0 0 40px rgba(201,168,76,.5);animation:flicker 8s ease-in-out infinite}
+@keyframes flicker{0%,88%,92%,96%,100%{opacity:1}89%,93%,97%{opacity:.75}}
+.i-title{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,5vw,44px);color:var(--text);text-align:center;letter-spacing:4px}
+.i-rule{width:min(260px,55%);height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.i-sub{font-size:clamp(8px,1.8vw,11px);color:var(--dim);letter-spacing:5px;text-transform:uppercase}
+
+/* SETUP */
+#s-setup{align-items:center;justify-content:flex-start;padding:10px;overflow-y:auto}
+.sbox{background:var(--panel2);border:1px solid var(--border2);padding:18px;max-width:600px;width:100%;margin:auto}
+.stitle{font-family:'Cinzel',serif;font-size:14px;color:var(--gold);letter-spacing:3px;text-align:center;border-bottom:1px solid var(--border);padding-bottom:9px;margin-bottom:14px}
+.slbl{font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.sinp{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border2);color:var(--gold);font-family:'Cinzel',serif;font-size:12px;padding:8px 11px;outline:none;margin-bottom:14px}
+.sinp:focus{border-color:var(--gold)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:3px;margin-bottom:14px;max-height:190px;overflow-y:auto}
+.rbtn{padding:6px 4px;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--text);font-size:10px;cursor:pointer;transition:all .12s;text-align:center;line-height:1.3;font-family:'Cinzel',serif}
+.rbtn:hover,.rbtn.pick{border-color:var(--gold);color:var(--gold2);background:rgba(201,168,76,.09)}
+.ideo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:14px}
+@media(min-width:500px){.ideo-grid{grid-template-columns:repeat(3,1fr)}}
+.ideo-card{padding:9px;background:rgba(0,0,0,.32);border:1px solid var(--border);cursor:pointer;transition:all .12s}
+.ideo-card.pick{background:rgba(201,168,76,.05)}
+.ic-icon{font-size:17px;margin-bottom:2px}
+.ic-name{font-family:'Cinzel',serif;font-size:10px;margin-bottom:4px}
+.ic-stat{font-size:8px;line-height:1.6}
+.ic-plus{color:#5fce4f}.ic-minus{color:#ce5048}
+
+/* HUD */
+#s-game{flex-direction:column}
+#hud{background:linear-gradient(180deg,#161008,#0e0a04);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 6px;gap:0;flex-shrink:0;min-height:38px;overflow-x:auto}
+#hud::-webkit-scrollbar{display:none}
+.hud-season{font-size:14px;margin-right:5px;flex-shrink:0}
+.hud-date{font-family:'Cinzel',serif;color:var(--gold);font-size:clamp(11px,1.8vw,16px);padding-right:8px;border-right:1px solid var(--border);margin-right:6px;flex-shrink:0;letter-spacing:1px;white-space:nowrap}
+.hstat{display:flex;flex-direction:column;justify-content:center;padding:0 6px;border-right:1px solid rgba(42,36,24,.7);height:38px;flex-shrink:0}
+.hsl{font-size:clamp(5.5px,.8vw,7.5px);color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+.hsv{font-family:'Cinzel',serif;font-size:clamp(10px,1.4vw,13px);color:var(--gold);line-height:1.2}
+.hstat.warn .hsv{color:#ff8844}
+.hud-spacer{flex:1;min-width:4px}
+#hud-ideo{font-family:'Cinzel',serif;font-size:clamp(7px,1vw,10px);padding:2px 7px;border:1px solid;letter-spacing:1px;flex-shrink:0;text-transform:uppercase;margin-right:4px}
+.zoom-btns{display:flex;gap:2px;flex-shrink:0}
+.zbtn{width:28px;height:28px;background:rgba(0,0,0,.35);border:1px solid var(--border);color:var(--gold);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;font-family:monospace}
+.zbtn:hover{border-color:var(--gold)}
+.zbtn:active{transform:scale(.88)}
+
+/* MAP MODE BAR */
+#map-mode-bar{display:flex;gap:2px;padding:2px 6px;background:rgba(0,0,0,.25);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+#map-mode-bar::-webkit-scrollbar{display:none}
+.mmbtn{padding:3px 9px;background:rgba(0,0,0,.28);border:1px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .12s;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.mmbtn:hover{border-color:var(--border2);color:var(--text)}
+.mmbtn.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.07)}
+
+/* GAME BODY */
+#game-body{flex:1;display:flex;overflow:hidden;min-height:0}
+#map-wrap{flex:1;position:relative;overflow:hidden;min-height:0;min-width:0}
+#map-wrap.panning{cursor:grabbing}
+#map-wrap.move-mode{cursor:crosshair}
+#map-canvas{width:100%;height:100%;display:block;touch-action:none;user-select:none}
+#move-banner{display:none;position:absolute;pointer-events:none;background:rgba(10,40,80,.88);border:1px solid rgba(80,200,80,.5);padding:4px 14px;font-family:'Cinzel',serif;font-size:11px;color:#80ff80;top:6px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:5}
+#move-banner.naval{color:#80e0ff;border-color:rgba(80,200,255,.5);background:rgba(10,30,60,.9)}
+#season-banner{position:absolute;top:6px;right:8px;background:rgba(6,8,14,.88);border:1px solid var(--border);padding:3px 9px;font-family:'Cinzel',serif;font-size:9px;color:var(--text);pointer-events:none;z-index:5}
+#res-tooltip{position:absolute;background:rgba(6,8,14,.95);border:1px solid var(--gold);padding:7px 10px;font-size:9.5px;pointer-events:none;z-index:20;display:none;min-width:140px}
+.rt-row{display:flex;justify-content:space-between;gap:10px;margin:2px 0;color:var(--text)}
+.rt-lbl{color:var(--dim)}
+
+/* SIDE PANEL */
+#side-panel{width:286px;min-width:250px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+#sp-header{background:linear-gradient(180deg,#161008,#0e0a05);border-bottom:1px solid var(--border);padding:9px 11px;flex-shrink:0}
+.sp-rname{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);margin-bottom:2px}
+.sp-rsub{font-size:9px;color:var(--dim);font-style:italic;margin-bottom:4px}
+.sp-4{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:4px}
+.sp-box{background:rgba(0,0,0,.28);border:1px solid rgba(42,36,24,.5);padding:3px 4px;text-align:center}
+.sp-bl{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.3px}
+.sp-bv{font-family:'Cinzel',serif;font-size:12px;color:var(--text)}
+.sp-res{display:flex;gap:3px;flex-wrap:wrap;margin:3px 0}
+.res-chip{font-size:9px;padding:1px 5px;border:1px solid rgba(80,80,40,.4);background:rgba(40,40,20,.3)}
+.badge{display:inline-block;padding:2px 5px;font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:1px;text-transform:uppercase;border:1px solid;margin-right:2px;margin-bottom:3px}
+.badge.ours{color:#6dff6d;border-color:#1a7a1a}.badge.war{color:#ff7070;border-color:#7a1a1a}.badge.pact{color:#f0d080;border-color:#7a6a18}.badge.ally{color:#80c8ff;border-color:#2060a0}.badge.neut{color:#777;border-color:#333}.badge.cap{color:#f0d080;border-color:var(--gold)}.badge.resist{color:#ff9040;border-color:#804020}
+.ibar-wrap{margin:3px 0}
+.ibar-lbl{font-size:7.5px;color:var(--dim);display:flex;justify-content:space-between}
+.ibar{height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-top:2px}
+.ibar-fill{height:100%;border-radius:2px;transition:width .35s}
+.bld-row{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.bld-tag{font-size:8px;padding:2px 5px;border:1px solid var(--border);color:var(--dim)}
+#sp-actions{flex:1;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:2px}
+#sp-actions::-webkit-scrollbar{width:2px}
+#sp-actions::-webkit-scrollbar-thumb{background:var(--border)}
+.sp-sec{font-family:'Cinzel',serif;font-size:7.5px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;padding:4px 0 2px;border-bottom:1px solid rgba(42,36,24,.35);margin-top:3px}
+.abtn{width:100%;padding:6px 9px;background:rgba(0,0,0,.2);border:1px solid var(--border);color:var(--text);font-family:'IM Fell English',serif;font-size:11px;cursor:pointer;transition:all .11s;text-align:left;display:flex;align-items:center;gap:7px}
+.abtn:hover:not(:disabled){background:rgba(201,168,76,.06);border-color:var(--gold);color:var(--gold)}
+.abtn:disabled{opacity:.22;cursor:not-allowed}
+.abtn.war-btn:hover:not(:disabled){border-color:var(--red2);color:#ff7070;background:rgba(130,26,26,.09)}
+.abtn.peace-btn:hover:not(:disabled){border-color:var(--green2);color:#7aff7a;background:rgba(26,100,40,.09)}
+.abtn.active-mode{border-color:#50ff50;color:#80ff80;background:rgba(26,120,26,.12)}
+.abtn.active-naval{border-color:#50c8ff;color:#80e8ff;background:rgba(20,80,140,.15)}
+.abtn .ic{font-size:13px;flex-shrink:0}
+.abtn .al{display:flex;flex-direction:column}
+.abtn .am{font-size:11px}
+.abtn .as{font-size:7.5px;color:var(--dim);margin-top:1px}
+#sp-end{padding:7px 10px 8px;flex-shrink:0;border-top:1px solid var(--border)}
+#sp-log{border-top:1px solid var(--border);height:110px;flex-shrink:0;display:flex;flex-direction:column}
+.sp-log-title{font-family:'Cinzel',serif;font-size:7.5px;color:var(--dim);letter-spacing:2px;padding:3px 9px;border-bottom:1px solid rgba(42,36,24,.4);background:rgba(0,0,0,.2)}
+#log{flex:1;overflow-y:auto;padding:2px 7px;font-size:9px}
+#log::-webkit-scrollbar{width:2px}
+#log::-webkit-scrollbar-thumb{background:var(--border)}
+.le{padding:2px 0;border-bottom:1px solid rgba(42,36,24,.1);line-height:1.4;display:flex;gap:3px}
+.lt{color:var(--dim);flex-shrink:0;font-size:7.5px}
+.lm.war{color:#ff8888}.lm.peace{color:#80e880}.lm.diplo{color:#80a8f8}.lm.event{color:#e0c060}.lm.info{color:#606060}.lm.vic{color:var(--gold2)}.lm.build{color:#70c0f8}.lm.revolt{color:#f06020}.lm.ideo{color:#b080f0}.lm.move{color:#80e880}.lm.naval{color:#60e8ff}.lm.resist{color:#ff9040}.lm.loan{color:#c0e080}.lm.season{color:#a0c8f0}
+
+/* MOBILE */
+#bottom{background:var(--panel);border-top:1px solid var(--border);flex-shrink:0;display:none}
+#tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:6px 2px;font-family:'Cinzel',serif;font-size:clamp(7px,2vw,9px);letter-spacing:.6px;text-transform:uppercase;color:var(--dim);background:transparent;border:none;cursor:pointer;transition:all .12s;text-align:center;border-bottom:2px solid transparent}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tpane{display:none;padding:6px 8px 4px;max-height:200px;overflow-y:auto}
+.tpane.on{display:block}
+.ri-name{font-family:'Cinzel',serif;font-size:12px;color:var(--gold);margin-bottom:2px}
+.ri-owner{font-size:9px;color:var(--dim);font-style:italic;margin-bottom:3px}
+.ri-row{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:3px}
+.ri-box{background:rgba(0,0,0,.25);border:1px solid rgba(42,36,24,.45);padding:3px 4px;text-align:center}
+.ri-bl{font-size:6.5px;color:var(--dim);text-transform:uppercase}
+.ri-bv{font-family:'Cinzel',serif;font-size:11px;color:var(--text)}
+
+/* MODAL */
+#mo{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:flex-end;justify-content:center;z-index:200}
+#mo.on{display:flex}
+#mb{background:linear-gradient(155deg,#1a1208,#0c0804);border:1px solid var(--gold);border-bottom:none;padding:14px 13px 20px;width:100%;max-width:520px;max-height:90dvh;overflow-y:auto;box-shadow:0 -4px 28px rgba(201,168,76,.14)}
+#mb::-webkit-scrollbar{width:2px}
+#mb::-webkit-scrollbar-thumb{background:var(--border)}
+.mt{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.mx{font-size:11px;line-height:1.7;color:var(--text);margin-bottom:6px}
+.mx.warn{color:#ff8844;border-left:2px solid #ff6622;padding-left:8px}
+.mbtns{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+input[type=range]{width:100%;height:4px;appearance:none;background:linear-gradient(90deg,var(--gold) var(--pct,50%),rgba(42,36,24,.7) var(--pct,50%));border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;background:var(--gold);border-radius:50%}
+.slider-w{margin:9px 0}
+.slider-l{display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-bottom:3px}
+.slider-v{color:var(--gold);font-family:'Cinzel',serif;font-size:12px}
+.tlist{display:flex;flex-direction:column;gap:3px;margin:7px 0}
+.ti{padding:7px 10px;background:rgba(0,0,0,.25);border:1px solid var(--border);cursor:pointer;transition:all .11s;display:flex;justify-content:space-between;align-items:center}
+.ti:hover{border-color:var(--gold);background:rgba(201,168,76,.04)}
+.ti.ene:hover{border-color:var(--red2);background:rgba(130,26,26,.08)}
+.ti.grn:hover{border-color:var(--green2);background:rgba(26,100,40,.08)}
+.tn{font-family:'Cinzel',serif;font-size:10px;color:var(--text)}
+.ta{font-size:8px;color:var(--dim);text-align:right}
+.ideo-mo-list{display:flex;flex-direction:column;gap:4px;margin-top:7px}
+.ideo-mo-card{padding:8px 10px;background:rgba(0,0,0,.28);border:1px solid var(--border);cursor:pointer;transition:all .11s}
+.ideo-mo-card:hover{border-color:var(--border2)}
+.ideo-mo-head{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.ideo-mo-icon{font-size:14px}
+.ideo-mo-name{font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px}
+.ideo-mo-stats{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.ideo-mo-stat{font-size:8px;line-height:1.5}
+.imp{color:#60cc50}.imm{color:#cc5048}
+
+/* BATTLE */
+#s-battle{align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:14px;background:radial-gradient(ellipse at center,#180a08,#030101)}
+.btitle{font-family:'Cinzel Decorative',serif;font-size:clamp(14px,4.5vw,24px);color:var(--gold);letter-spacing:3px;text-shadow:0 0 28px rgba(201,168,76,.4)}
+.bfield{display:flex;align-items:center;gap:20px;width:100%;max-width:420px}
+.bside{flex:1;text-align:center;padding:9px 5px;border:1px solid;position:relative;overflow:hidden}
+.batk{border-color:var(--gold)}.bdef{border-color:#d43030}
+.bst{font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+.bsn{font-family:'Cinzel',serif;font-size:clamp(8px,2vw,11px);color:var(--text);margin-bottom:3px}
+.bsa{font-family:'Cinzel',serif;font-size:clamp(16px,5vw,26px);line-height:1}
+.batk .bsa{color:var(--gold2)}.bdef .bsa{color:#ff7070}
+.bvs{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,5.5vw,32px);color:#d43030;flex-shrink:0;animation:vsb .9s ease-in-out infinite alternate}
+@keyframes vsb{from{transform:scale(1)}to{transform:scale(1.1)}}
+.bbars{width:100%;max-width:420px;display:flex;flex-direction:column;gap:5px}
+.bbw{display:flex;flex-direction:column;gap:2px}
+.bbl{font-size:8px;color:var(--dim);text-transform:uppercase;display:flex;justify-content:space-between}
+.bb{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.bbf{height:100%;border-radius:3px;transition:width .7s}
+.ba{background:linear-gradient(90deg,var(--gold),var(--gold2))}.bd{background:linear-gradient(90deg,var(--red),#d43030)}
+.bres{font-family:'Cinzel',serif;font-size:clamp(11px,3vw,15px);text-align:center;letter-spacing:1.5px;padding:7px 14px;border:1px solid;opacity:0;transition:opacity .4s}
+.bres.win{color:#80ff80;border-color:#3a9c28;background:rgba(58,156,40,.08)}.bres.lose{color:#ff7070;border-color:#c03030;background:rgba(192,48,48,.08)}.bres.show{opacity:1}
+.bbonus{font-size:8.5px;color:var(--dim);text-align:center;margin-top:2px}
+
+/* END SCREENS */
+#s-victory,#s-defeat{align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:18px}
+#s-victory{background:radial-gradient(ellipse at center,#1a1406,#040402)}
+#s-defeat{background:radial-gradient(ellipse at center,#160304,#020101)}
+.eico{font-size:clamp(48px,12vw,72px)}
+.etit{font-family:'Cinzel Decorative',serif;font-size:clamp(17px,5vw,36px);line-height:1.2}
+#s-victory .etit{color:var(--gold)}#s-defeat .etit{color:#ff4040}
+.esub{font-size:clamp(10px,2.5vw,13px);color:var(--dim);font-style:italic;max-width:360px;line-height:1.7}
+#popup{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--border2);padding:7px 14px;font-size:10px;color:var(--text);max-width:310px;width:calc(100% - 20px);z-index:300;opacity:0;transition:opacity .2s;pointer-events:none;text-align:center}
+#popup.on{opacity:1}
+@media(max-width:700px){#game-body{flex-direction:column}#side-panel{display:none!important}#bottom{display:block!important}}
+@media(min-width:701px){#bottom{display:none!important}#side-panel{display:flex!important}}
+</style>
+</head>
+<body>
+<!-- INTRO -->
+<div class="scr on" id="s-intro">
+  <div class="i-year">1936</div>
+  <div class="i-title">Time of Conquest</div>
+  <div class="i-rule"></div>
+  <div class="i-sub">Europe · Grand Strategy · Age of Ideologies</div>
+  <button class="btn" onclick="show('setup')" style="margin-top:12px">▶ Begin Campaign</button>
+</div>
+
+<!-- SETUP -->
+<div class="scr" id="s-setup">
+  <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:10px;overflow-y:auto">
+    <div class="sbox">
+      <div class="stitle">New Campaign — 1936</div>
+      <div class="slbl">Leader name</div>
+      <input class="sinp" id="rname" type="text" placeholder="The Chancellor..." maxlength="26">
+      <div class="slbl">Starting nation</div>
+      <div class="rgrid" id="rgrid"></div>
+      <div class="slbl">Ideology (determined by nation)</div>
+      <div id="ideo-grid" style="margin-bottom:14px;min-height:32px"></div>
+      <button class="btn full" id="startbtn" onclick="startGame()" disabled>⚔ Begin Conquest</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="scr" id="s-game">
+  <div id="hud">
+    <span class="hud-season" id="h-season">☀️</span>
+    <div class="hud-date" id="h-date">Jan 1936</div>
+    <div class="hstat"><div class="hsl">Regions</div><div class="hsv" id="h-reg">—</div></div>
+    <div class="hstat"><div class="hsl">Gold</div><div class="hsv" id="h-gld">—</div></div>
+    <div class="hstat" id="h-loan-st" style="display:none"><div class="hsl">Debt</div><div class="hsv warn" id="h-debt">—</div></div>
+    <div class="hstat"><div class="hsl">Army</div><div class="hsv" id="h-arm">—</div></div>
+    <div class="hstat" id="h-supply-st"><div class="hsl">Supply</div><div class="hsv" id="h-supply">—</div></div>
+    <div class="hstat"><div class="hsl">Pop.</div><div class="hsv" id="h-pop">—</div></div>
+    <div class="hud-spacer"></div>
+    <div id="hud-ideo"></div>
+    <div class="zoom-btns">
+      <button class="zbtn" onclick="zoomBy(1.28)">+</button>
+      <button class="zbtn" onclick="zoomBy(1/1.28)">−</button>
+      <button class="zbtn" onclick="zoomReset()" style="font-size:10px">⊡</button>
+    </div>
+  </div>
+  <div id="map-mode-bar">
+    <button class="mmbtn on" id="mm-political" onclick="setMapMode('political')">🗺 Political</button>
+    <button class="mmbtn" id="mm-terrain" onclick="setMapMode('terrain')">🏔 Terrain</button>
+    <button class="mmbtn" id="mm-resources" onclick="setMapMode('resources')">⛏ Resources</button>
+    <button class="mmbtn" id="mm-disease" onclick="setMapMode('disease')">☣ Disease</button>
+  </div>
+  <div id="game-body">
+    <div id="map-wrap">
+      <div id="move-banner">🚶 MOVE MODE</div>
+      <div id="season-banner" id="season-banner">☀️ Summer</div>
+      <div id="res-tooltip">
+        <div class="rt-row"><span class="rt-lbl">🛢️ Oil</span><span id="tt-oil">0</span></div>
+        <div class="rt-row"><span class="rt-lbl">⚫ Coal</span><span id="tt-coal">0</span></div>
+        <div class="rt-row"><span class="rt-lbl">🌾 Grain</span><span id="tt-grain">0</span></div>
+        <div class="rt-row"><span class="rt-lbl">⚙️ Steel</span><span id="tt-steel">0</span></div>
+      </div>
+      <canvas id="map-canvas"></canvas>
+    </div>
+    <div id="side-panel">
+      <div id="sp-header">
+        <div class="sp-rname" id="sp-nm">Select a territory</div>
+        <div id="sp-bdg"></div>
+        <div class="sp-rsub" id="sp-ow"></div>
+        <div class="sp-4">
+          <div class="sp-box"><div class="sp-bl">Army</div><div class="sp-bv" id="sp-ar">—</div></div>
+          <div class="sp-box"><div class="sp-bl">Pop.</div><div class="sp-bv" id="sp-pp">—</div></div>
+          <div class="sp-box"><div class="sp-bl">Income</div><div class="sp-bv" id="sp-in">—</div></div>
+          <div class="sp-box"><div class="sp-bl">Assim.</div><div class="sp-bv" id="sp-as">—</div></div>
+        </div>
+        <div class="sp-res" id="sp-res"></div>
+        <div class="ibar-wrap" id="sp-ibar" style="display:none">
+          <div class="ibar-lbl"><span>Instability</span><span id="sp-iv">0%</span></div>
+          <div class="ibar"><div class="ibar-fill" id="sp-if"></div></div>
+        </div>
+        <div class="bld-row" id="sp-blds"></div>
+      </div>
+      <div id="sp-actions">
+        <div class="sp-sec">Movement</div>
+        <button class="abtn" id="sp-btn-move" onclick="toggleMoveMode()" disabled>
+          <span class="ic">🚶</span><span class="al"><span class="am">Move Army</span><span class="as" id="sp-move-sub">Select your territory</span></span>
+        </button>
+        <button class="abtn" id="sp-btn-naval" onclick="toggleNavalMode()" disabled>
+          <span class="ic">⚓</span><span class="al"><span class="am">Naval Transport</span><span class="as" id="sp-naval-sub">Need port + coast</span></span>
+        </button>
+        <div class="sp-sec">Economy</div>
+        <button class="abtn" onclick="openLoan()"><span class="ic">🏦</span><span class="al"><span class="am">Take a loan</span><span class="as" id="sp-loan-sub">World Bank · 500/1000/2000g</span></span></button>
+        <button class="abtn" onclick="openBuild()"><span class="ic">🏗</span><span class="al"><span class="am">Construct building</span><span class="as" id="sp-bld-sub">Select your territory</span></span></button>
+        <div class="sp-sec">Military</div>
+        <button class="abtn" onclick="openDraft()"><span class="ic">🪖</span><span class="al"><span class="am">Conscript soldiers</span><span class="as">1,000 pop + 1 gold/soldier</span></span></button>
+        <button class="abtn war-btn" id="sp-btn-atk" onclick="openAttack()" disabled>
+          <span class="ic">⚔</span><span class="al"><span class="am">Declare war / Attack</span><span class="as" id="sp-atk-sub">Select enemy territory</span></span>
+        </button>
+        <button class="abtn" onclick="openSponsor()"><span class="ic">🔥</span><span class="al"><span class="am">Sponsor resistance</span><span class="as">Destabilize enemy territory</span></span></button>
+        <div class="sp-sec">Diplomacy</div>
+        <button class="abtn" onclick="openAllianceMenu()"><span class="ic">🤝</span><span class="al"><span class="am">Alliances & Pacts</span><span class="as" id="sp-ally-sub">NAP · Alliance · Ultimatum</span></span></button>
+        <button class="abtn peace-btn" onclick="openPeace()"><span class="ic">🕊</span><span class="al"><span class="am">Peace negotiations</span><span class="as">End a war</span></span></button>
+        <button class="abtn" onclick="openMarionette()"><span class="ic">🎭</span><span class="al"><span class="am">Puppet state</span><span class="as">Leave captured nation as vassal</span></span></button>
+        <div class="sp-sec">Government</div>
+        <button class="abtn" onclick="openRevolution()"><span class="ic">🔥</span><span class="al"><span class="am">Revolution</span><span class="as">Change ideology · 500 gold</span></span></button>
+      </div>
+      <div id="sp-end"><button class="btn full" id="end-btn" onclick="endTurn()">Advance Month ›</button></div>
+      <div id="sp-log">
+        <div class="sp-log-title">War Dispatch</div>
+        <div id="log"><div style="color:var(--dim);text-align:center;padding:7px;font-size:9px">No events yet</div></div>
+      </div>
+    </div>
+  </div>
+  <!-- MOBILE BOTTOM -->
+  <div id="bottom">
+    <div id="tabs">
+      <button class="tab on" onclick="switchTab('info')" id="tab-info">📍 Region</button>
+      <button class="tab" onclick="switchTab('act')" id="tab-act">⚔ Act</button>
+      <button class="tab" onclick="switchTab('diplo')" id="tab-diplo">🤝 Diplo</button>
+      <button class="tab" onclick="switchTab('log')" id="tab-log">📜 Log</button>
+    </div>
+    <div class="tpane on" id="pane-info">
+      <div class="ri-name" id="ri-nm">Select territory</div>
+      <div id="ri-bdg"></div>
+      <div class="ri-owner" id="ri-ow"></div>
+      <div class="ri-row">
+        <div class="ri-box"><div class="ri-bl">Army</div><div class="ri-bv" id="ri-ar">—</div></div>
+        <div class="ri-box"><div class="ri-bl">Pop</div><div class="ri-bv" id="ri-pp">—</div></div>
+        <div class="ri-box"><div class="ri-bl">Income</div><div class="ri-bv" id="ri-in">—</div></div>
+        <div class="ri-box"><div class="ri-bl">Assim</div><div class="ri-bv" id="ri-as">—</div></div>
+      </div>
+      <div class="ibar-wrap" id="ri-ibar">
+        <div class="ibar-lbl"><span>Instability</span><span id="ri-iv">0%</span></div>
+        <div class="ibar"><div class="ibar-fill" id="ri-if"></div></div>
+      </div>
+      <div class="sp-res" id="ri-res"></div>
+      <div class="bld-row" id="ri-blds"></div>
+    </div>
+    <div class="tpane" id="pane-act">
+      <button class="abtn" id="mob-btn-move" onclick="toggleMoveMode()" disabled><span class="ic">🚶</span><span class="al"><span class="am">Move Army</span></span></button>
+      <button class="abtn" id="mob-btn-naval" onclick="toggleNavalMode()" disabled><span class="ic">⚓</span><span class="al"><span class="am">Naval</span></span></button>
+      <button class="abtn" onclick="openDraft()"><span class="ic">🪖</span><span class="al"><span class="am">Conscript</span></span></button>
+      <button class="abtn" onclick="openBuild()"><span class="ic">🏗</span><span class="al"><span class="am">Build</span></span></button>
+      <button class="abtn war-btn" id="btn-atk" onclick="openAttack()" disabled><span class="ic">⚔</span><span class="al"><span class="am">Attack</span><span class="as" id="atk-sub">Select enemy</span></span></button>
+      <button class="abtn" onclick="openSponsor()"><span class="ic">🔥</span><span class="al"><span class="am">Sponsor resistance</span></span></button>
+      <button class="abtn" onclick="openLoan()"><span class="ic">🏦</span><span class="al"><span class="am">Take loan</span></span></button>
+      <button class="abtn" onclick="openRevolution()"><span class="ic">🔄</span><span class="al"><span class="am">Revolution</span></span></button>
+      <div style="padding:3px 0"><button class="btn full" id="end-btn-mob" onclick="endTurn()">Advance Month ›</button></div>
+    </div>
+    <div class="tpane" id="pane-diplo">
+      <button class="abtn" onclick="openAllianceMenu()"><span class="ic">🤝</span><span class="al"><span class="am">Alliances & Pacts</span></span></button>
+      <button class="abtn peace-btn" onclick="openPeace()"><span class="ic">🕊</span><span class="al"><span class="am">Peace talks</span></span></button>
+      <button class="abtn" onclick="openMarionette()"><span class="ic">🎭</span><span class="al"><span class="am">Puppet state</span></span></button>
+    </div>
+    <div class="tpane" id="pane-log"><div id="mob-log" style="font-size:9px"></div></div>
+  </div>
+</div>
+
+<!-- BATTLE -->
+<div class="scr" id="s-battle">
+  <div class="btitle">⚔ Battle Report ⚔</div>
+  <div class="bfield">
+    <div class="bside batk"><div class="bst">Attacking</div><div class="bsn" id="b-an">—</div><div class="bsa" id="b-aa">0</div></div>
+    <div class="bvs">VS</div>
+    <div class="bside bdef"><div class="bst">Defending</div><div class="bsn" id="b-dn">—</div><div class="bsa" id="b-da">0</div></div>
+  </div>
+  <div class="bbars">
+    <div class="bbw"><div class="bbl"><span>Attack power</span><span id="b-ap">—</span></div><div class="bb"><div class="bbf ba" id="b-ab" style="width:0%"></div></div></div>
+    <div class="bbw"><div class="bbl"><span>Defense power</span><span id="b-dp">—</span></div><div class="bb"><div class="bbf bd" id="b-db" style="width:0%"></div></div></div>
+  </div>
+  <div class="bbonus" id="b-bonus"></div>
+  <div class="bres" id="bres"></div>
+</div>
+
+<!-- VICTORY / DEFEAT -->
+<div class="scr" id="s-victory"><div class="eico">🌍</div><div class="etit">Europa Conquered</div><div class="esub" id="vic-txt"></div><button class="btn" onclick="location.reload()">New Campaign</button></div>
+<div class="scr" id="s-defeat"><div class="eico">💀</div><div class="etit">Regime Collapsed</div><div class="esub" id="def-txt"></div><button class="btn" onclick="location.reload()">Try Again</button></div>
+
+<!-- MODAL + POPUP -->
+<div id="mo" onclick="moOut(event)"><div id="mb"><div class="mt" id="mo-t">—</div><div id="mo-b"></div><div class="mbtns" id="mo-btns"></div></div></div>
+<div id="popup"></div>
+<script src="map.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
