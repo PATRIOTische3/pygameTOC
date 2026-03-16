@@ -21,117 +21,196 @@ body{background:var(--dark);color:var(--text);font-family:'IM Fell English',seri
 .btn.dim{border-color:#333;color:#666}
 
 /* INTRO */
-#s-intro{align-items:center;justify-content:center;gap:0;padding:0;position:relative;overflow:hidden;background:#06080e}
-#intro-map-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.38;pointer-events:none;z-index:0}
-#intro-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(6,8,14,.25) 0%,rgba(6,8,14,.80) 100%);z-index:1;pointer-events:none}
-#intro-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px}
-.i-eyebrow{font-family:'Cinzel',serif;font-size:clamp(9px,2vw,12px);color:var(--dim);letter-spacing:8px;text-transform:uppercase}
-.i-title{font-family:'Cinzel Decorative',serif;font-size:clamp(28px,8vw,80px);color:var(--gold);text-align:center;letter-spacing:3px;text-shadow:0 0 60px rgba(201,168,76,.5),0 2px 24px rgba(0,0,0,.9);animation:titlePulse 5s ease-in-out infinite;line-height:1.1}
-@keyframes titlePulse{0%,100%{text-shadow:0 0 40px rgba(201,168,76,.3),0 2px 20px rgba(0,0,0,.9)}50%{text-shadow:0 0 90px rgba(201,168,76,.7),0 2px 24px rgba(0,0,0,.9)}}
-.i-rule{width:min(320px,60%);height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:2px 0}
-@keyframes flicker{0%,88%,92%,96%,100%{opacity:1}89%,93%,97%{opacity:.75}}
+#s-intro{align-items:center;justify-content:center;gap:16px;padding:24px;position:relative;overflow:hidden;background:#06080e}
+#intro-map-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0.38}
+.intro-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px}
+.i-sword{font-size:clamp(32px,6vw,56px);animation:swordFloat 3s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(201,168,76,.6));line-height:1}
+@keyframes swordFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.i-title{font-family:'Cinzel Decorative',serif;font-size:clamp(24px,5.5vw,52px);color:var(--gold);text-align:center;letter-spacing:4px;text-shadow:0 0 40px rgba(201,168,76,.5),0 2px 8px rgba(0,0,0,.8);animation:flicker 8s ease-in-out infinite}
+@keyframes flicker{0%,88%,92%,96%,100%{opacity:1}89%,93%,97%{opacity:.82}}
+.i-rule{width:min(320px,65%);height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+
+/* WORLDS */
+#s-worlds{position:relative;overflow:hidden;background:#06080e}
+#worlds-map-bg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.22}
+#worlds-panel{position:relative;z-index:2;width:min(540px,100%);margin:0 auto;padding:clamp(16px,3vh,36px) clamp(14px,3vw,32px);display:flex;flex-direction:column;gap:clamp(10px,1.8vh,18px);overflow-y:auto;height:100%}
+#worlds-panel::-webkit-scrollbar{width:2px}
+#worlds-panel::-webkit-scrollbar-thumb{background:var(--border)}
+.worlds-header{display:flex;align-items:flex-end;justify-content:space-between}
+.worlds-title{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,3.5vw,32px);color:var(--gold);letter-spacing:3px;text-shadow:0 0 24px rgba(201,168,76,.35)}
+.worlds-back{background:none;border:none;color:var(--dim);font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;cursor:pointer;transition:color .15s;padding:0 0 3px}
+.worlds-back:hover{color:var(--gold)}
+.worlds-rule{height:1px;background:linear-gradient(90deg,transparent,var(--border2) 40%,var(--border2) 60%,transparent)}
+.worlds-actions{display:flex;gap:8px}
+.worlds-actions .btn{flex:1;padding:11px;font-size:clamp(9px,1vw,11px);text-align:center}
+.worlds-section-lbl{font-family:'Cinzel',serif;font-size:8px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;padding-bottom:5px;border-bottom:1px solid rgba(42,36,24,.4)}
+#worlds-list{display:flex;flex-direction:column;gap:6px}
+.world-empty{text-align:center;color:var(--dim);font-size:11px;font-style:italic;padding:28px 0;line-height:2}
+.world-card{display:flex;align-items:center;gap:12px;padding:11px 14px;background:rgba(0,0,0,.4);border:1px solid var(--border);cursor:default;transition:border-color .14s,background .14s}
+.world-card:hover{border-color:var(--border2);background:rgba(201,168,76,.03)}
+.world-card-flag{width:30px;height:30px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
+.world-card-info{flex:1;min-width:0}
+.world-card-name{font-family:'Cinzel',serif;font-size:clamp(11px,1.2vw,14px);color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.world-card-sub{font-size:clamp(8px,.85vw,10px);color:var(--dim);margin-top:2px;font-style:italic}
+.world-card-stats{display:flex;gap:12px;margin-top:5px;flex-wrap:wrap}
+.wcs{font-size:clamp(7px,.75vw,9px);color:var(--text);display:flex;align-items:center;gap:3px}
+.wcs b{font-family:'Cinzel',serif;color:var(--gold)}
+.world-card-btns{display:flex;gap:4px;flex-shrink:0}
+.wc-btn{padding:5px 9px;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .12s;text-transform:uppercase}
+.wc-btn.load{border-color:rgba(201,168,76,.4);color:var(--gold)}
+.wc-btn.load:hover{background:rgba(201,168,76,.08);border-color:var(--gold)}
+.wc-btn:hover{border-color:var(--border2);color:var(--text)}
+.wc-btn.del:hover{border-color:#7a1a1a;color:#ff7070}
 
 /* SETUP */
-#s-setup{align-items:center;justify-content:flex-start;padding:10px;overflow-y:auto}
-.sbox{background:var(--panel2);border:1px solid var(--border2);padding:18px;max-width:600px;width:100%;margin:auto}
-.stitle{font-family:'Cinzel',serif;font-size:14px;color:var(--gold);letter-spacing:3px;text-align:center;border-bottom:1px solid var(--border);padding-bottom:9px;margin-bottom:14px}
-.slbl{font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
-.sinp{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border2);color:var(--gold);font-family:'Cinzel',serif;font-size:12px;padding:8px 11px;outline:none;margin-bottom:14px}
-.sinp:focus{border-color:var(--gold)}
-.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:3px;margin-bottom:14px;max-height:190px;overflow-y:auto}
-.rbtn{padding:6px 4px;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--text);font-size:10px;cursor:pointer;transition:all .12s;text-align:center;line-height:1.3;font-family:'Cinzel',serif}
-.rbtn:hover,.rbtn.pick{border-color:var(--gold);color:var(--gold2);background:rgba(201,168,76,.09)}
-.ideo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:14px}
-@media(min-width:500px){.ideo-grid{grid-template-columns:repeat(3,1fr)}}
-.ideo-card{padding:9px;background:rgba(0,0,0,.32);border:1px solid var(--border);cursor:pointer;transition:all .12s}
-.ideo-card.pick{background:rgba(201,168,76,.05)}
-.ic-icon{font-size:17px;margin-bottom:2px}
-.ic-name{font-family:'Cinzel',serif;font-size:10px;margin-bottom:4px}
-.ic-stat{font-size:8px;line-height:1.6}
-.ic-plus{color:#5fce4f}.ic-minus{color:#ce5048}
+#s-setup{flex-direction:row;overflow:hidden}
+#setup-map-side{flex:1;position:relative;overflow:hidden;background:#06080e;display:none}
+@media(min-width:700px){#setup-map-side{display:block}}
+#setup-map-canvas{position:absolute;inset:0;width:100%;height:100%}
+#setup-map-label{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(6,8,14,.85);border:1px solid var(--gold);padding:5px 16px;font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:2px;white-space:nowrap;opacity:0;transition:opacity .3s}
+#setup-map-label.vis{opacity:1}
+#setup-panel{background:linear-gradient(160deg,#0e1018,#06080e);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;width:clamp(280px,30vw,420px)}
+@media(max-width:699px){#setup-panel{width:100%;border-left:none}}
+#setup-panel-inner{flex:1;overflow-y:auto;padding:clamp(10px,1.5vh,20px) clamp(10px,1.3vw,18px);display:flex;flex-direction:column;gap:clamp(6px,1.1vh,12px)}
+#setup-panel-inner::-webkit-scrollbar{width:2px}
+#setup-panel-inner::-webkit-scrollbar-thumb{background:var(--border)}
+.setup-back-btn{background:none;border:none;color:var(--dim);font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;cursor:pointer;padding:0;text-align:left;transition:color .15s}
+.setup-back-btn:hover{color:var(--gold)}
+.setup-section-title{font-family:'Cinzel Decorative',serif;font-size:clamp(14px,1.8vw,22px);color:var(--gold);letter-spacing:4px;text-shadow:0 0 20px rgba(201,168,76,.3)}
+.setup-block{display:flex;flex-direction:column;gap:5px}
+.setup-lbl{font-size:clamp(7px,.7vw,9px);color:var(--dim);letter-spacing:3px;text-transform:uppercase}
+.sinp{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--text);font-family:'IM Fell English',serif;font-size:clamp(11px,1.1vw,14px);padding:7px 10px;outline:none;transition:border .15s}
+.sinp:focus{border-color:var(--border2)}
+.sinp::placeholder{color:var(--dim)}
+#nation-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px}
+#nation-list::-webkit-scrollbar{width:2px}
+#nation-list::-webkit-scrollbar-thumb{background:var(--border)}
+.nat-row{display:flex;align-items:center;gap:9px;padding:6px 9px;background:rgba(0,0,0,.2);border:1px solid var(--border);cursor:pointer;transition:all .12s}
+.nat-row:hover{border-color:var(--border2);background:rgba(201,168,76,.04)}
+.nat-row.pick{border-color:var(--gold);background:rgba(201,168,76,.07)}
+.nat-swatch{width:14px;height:14px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+.nat-name{font-family:'Cinzel',serif;font-size:clamp(9px,.9vw,11px);color:var(--text);flex:1}
+.nat-ideo{font-size:clamp(7px,.7vw,9px);padding:1px 4px;border:1px solid;border-radius:1px}
+#nation-info-card{background:rgba(0,0,0,.35);border:1px solid var(--border2);padding:10px;display:flex;flex-direction:column;gap:7px;flex-shrink:0}
+#nic-header{display:flex;align-items:center;gap:10px}
+#nic-flag{width:30px;height:30px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.15)}
+#nic-name{font-family:'Cinzel',serif;font-size:clamp(11px,1.2vw,14px);color:var(--gold)}
+#nic-ideo{font-size:clamp(8px,.8vw,9px);color:var(--dim);margin-top:2px}
+#nic-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.nic-stat{background:rgba(0,0,0,.3);border:1px solid rgba(42,36,24,.4);padding:4px;text-align:center}
+.nic-sl{font-size:clamp(6px,.6vw,8px);color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.nic-sv{font-family:'Cinzel',serif;font-size:clamp(10px,1vw,12px);color:var(--text)}
+#nic-traits{display:flex;flex-wrap:wrap;gap:3px}
+.nic-trait{font-size:clamp(7px,.7vw,8px);padding:2px 6px;border:1px solid;border-radius:1px}
+.setup-nations-block{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+
+/* EDITABLE TITLE */
+.camp-title-wrap{display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px 0}
+.camp-title-wrap:hover .camp-title-edit-icon{opacity:.6}
+.camp-title-edit-icon{font-size:11px;color:var(--dim);opacity:0;transition:opacity .2s;flex-shrink:0;user-select:none}
+.camp-title-input{font-family:'Cinzel Decorative',serif;font-size:clamp(14px,1.8vw,22px);color:var(--gold);background:transparent;border:none;border-bottom:1.5px solid var(--gold);outline:none;width:100%;letter-spacing:3px;padding:2px 0}
+.camp-title-input::placeholder{color:var(--dim)}
+
+/* ERA CAROUSEL */
+.era-carousel{display:flex;align-items:center;height:clamp(60px,8.5vh,80px)}
+.era-arrow{background:none;border:none;color:var(--dim);font-size:clamp(24px,3.2vw,36px);cursor:pointer;padding:0 clamp(4px,.5vw,9px);flex-shrink:0;transition:color .15s;line-height:1;z-index:3;touch-action:manipulation;user-select:none}
+.era-arrow:hover{color:var(--gold)}
+@keyframes eraShake{0%,100%{transform:translateX(0) scaleX(1)}20%{transform:translateX(-6px) scaleX(.95)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.era-arrow.shake{animation:eraShake .38s ease;color:#cc3030!important}
+.era-track-outer{flex:1;overflow:hidden;position:relative;height:100%}
+.era-fog-l,.era-fog-r{position:absolute;top:0;bottom:0;width:28%;pointer-events:none;z-index:2}
+.era-fog-l{left:0;background:linear-gradient(90deg,var(--panel) 0%,transparent 100%)}
+.era-fog-r{right:0;background:linear-gradient(270deg,var(--panel) 0%,transparent 100%)}
+.era-track{display:flex;height:100%;will-change:transform}
+.era-slide{flex:0 0 33.3333%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid transparent;transition:border-color .25s,background .25s,opacity .25s,transform .25s}
+.era-slide.active{border-color:var(--gold);background:rgba(201,168,76,.07);box-shadow:0 0 18px rgba(201,168,76,.1),inset 0 0 10px rgba(201,168,76,.03)}
+.era-slide.side{border-color:rgba(42,36,24,.4);background:rgba(0,0,0,.18);opacity:.48;transform:scaleY(.86)}
+.era-slide.hidden{opacity:0}
+.era-year{font-family:'Cinzel',serif;font-size:clamp(15px,2vw,24px);color:var(--gold);letter-spacing:2px;line-height:1.1}
+.era-slide.side .era-year,.era-slide.locked .era-year{color:var(--dim)}
+.era-sub{font-size:clamp(7px,.75vw,9px);color:var(--dim);letter-spacing:.5px;text-align:center;padding:0 4px}
+.era-lock{font-size:clamp(9px,1vw,13px)}
 
 /* HUD */
 #s-game{flex-direction:column}
-#hud{background:linear-gradient(180deg,#161008,#0e0a04);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 6px;gap:0;flex-shrink:0;min-height:38px;overflow-x:auto}
+#hud{background:linear-gradient(180deg,#161008,#0e0a04);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 clamp(4px,.6vw,10px);gap:0;flex-shrink:0;min-height:clamp(38px,4.5vh,56px);overflow-x:auto}
 #hud::-webkit-scrollbar{display:none}
-.hud-season{font-size:14px;margin-right:5px;flex-shrink:0}
-.hud-date{font-family:'Cinzel',serif;color:var(--gold);font-size:clamp(11px,1.8vw,16px);padding-right:8px;border-right:1px solid var(--border);margin-right:6px;flex-shrink:0;letter-spacing:1px;white-space:nowrap}
-.hstat{display:flex;flex-direction:column;justify-content:center;padding:0 6px;border-right:1px solid rgba(42,36,24,.7);height:38px;flex-shrink:0}
-.hsl{font-size:clamp(5.5px,.8vw,7.5px);color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
-.hsv{font-family:'Cinzel',serif;font-size:clamp(10px,1.4vw,13px);color:var(--gold);line-height:1.2}
+.hud-season{font-size:clamp(14px,1.8vw,22px);margin-right:clamp(4px,.5vw,8px);flex-shrink:0}
+.hud-date{font-family:'Cinzel',serif;color:var(--gold);font-size:clamp(11px,1.4vw,20px);padding-right:clamp(6px,.8vw,12px);border-right:1px solid var(--border);margin-right:clamp(4px,.6vw,10px);flex-shrink:0;letter-spacing:1px;white-space:nowrap}
+.hstat{display:flex;flex-direction:column;justify-content:center;padding:0 clamp(5px,.7vw,11px);border-right:1px solid rgba(42,36,24,.7);height:clamp(38px,4.5vh,56px);flex-shrink:0}
+.hsl{font-size:clamp(6px,.7vw,10px);color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+.hsv{font-family:'Cinzel',serif;font-size:clamp(11px,1.3vw,18px);color:var(--gold);line-height:1.2}
 .hstat.warn .hsv{color:#ff8844}
 .hud-spacer{flex:1;min-width:4px}
-#hud-ideo{font-family:'Cinzel',serif;font-size:clamp(7px,1vw,10px);padding:2px 7px;border:1px solid;letter-spacing:1px;flex-shrink:0;text-transform:uppercase;margin-right:4px}
+#hud-ideo{font-family:'Cinzel',serif;font-size:clamp(8px,.9vw,13px);padding:clamp(2px,.3vh,4px) clamp(6px,.7vw,10px);border:1px solid;letter-spacing:1px;flex-shrink:0;text-transform:uppercase;margin-right:clamp(3px,.4vw,6px)}
+.save-btn-hud{padding:0 clamp(6px,.8vw,12px);height:clamp(22px,2.8vh,34px);background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:clamp(8px,.8vw,11px);letter-spacing:1px;cursor:pointer;transition:all .12s;flex-shrink:0;margin-right:clamp(3px,.4vw,6px);display:flex;align-items:center;gap:4px;text-transform:uppercase}
+.save-btn-hud:hover{border-color:var(--gold);color:var(--gold)}
 .zoom-btns{display:flex;gap:2px;flex-shrink:0}
-.zbtn{width:28px;height:28px;background:rgba(0,0,0,.35);border:1px solid var(--border);color:var(--gold);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;font-family:monospace}
+.zbtn{width:clamp(24px,2.8vw,38px);height:clamp(24px,2.8vw,38px);background:rgba(0,0,0,.35);border:1px solid var(--border);color:var(--gold);font-size:clamp(14px,1.6vw,22px);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;font-family:monospace}
 .zbtn:hover{border-color:var(--gold)}
 .zbtn:active{transform:scale(.88)}
-
-/* MAP MODE BAR */
-#map-mode-bar{display:flex;gap:2px;padding:2px 6px;background:rgba(0,0,0,.25);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+#map-mode-bar{display:flex;gap:2px;padding:clamp(2px,.3vh,4px) clamp(4px,.5vw,8px);background:rgba(0,0,0,.25);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
 #map-mode-bar::-webkit-scrollbar{display:none}
-.mmbtn{padding:3px 9px;background:rgba(0,0,0,.28);border:1px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .12s;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.mmbtn{padding:clamp(3px,.4vh,6px) clamp(8px,.9vw,14px);background:rgba(0,0,0,.28);border:1px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:clamp(8px,.8vw,12px);letter-spacing:1px;cursor:pointer;transition:all .12s;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
 .mmbtn:hover{border-color:var(--border2);color:var(--text)}
 .mmbtn.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.07)}
-
-/* GAME BODY */
 #game-body{flex:1;display:flex;overflow:hidden;min-height:0}
 #map-wrap{flex:1;position:relative;overflow:hidden;min-height:0;min-width:0}
 #map-wrap.panning{cursor:grabbing}
 #map-wrap.move-mode{cursor:crosshair}
 #map-canvas{width:100%;height:100%;display:block;touch-action:none;user-select:none}
-#move-banner{display:none;position:absolute;pointer-events:none;background:rgba(10,40,80,.88);border:1px solid rgba(80,200,80,.5);padding:4px 14px;font-family:'Cinzel',serif;font-size:11px;color:#80ff80;top:6px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:5}
+#move-banner{display:none;position:absolute;pointer-events:none;background:rgba(10,40,80,.88);border:1px solid rgba(80,200,80,.5);padding:clamp(3px,.4vh,6px) clamp(10px,1.2vw,18px);font-family:'Cinzel',serif;font-size:clamp(10px,1.1vw,15px);color:#80ff80;top:6px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:5}
 #move-banner.naval{color:#80e0ff;border-color:rgba(80,200,255,.5);background:rgba(10,30,60,.9)}
-#season-banner{position:absolute;top:6px;right:8px;background:rgba(6,8,14,.88);border:1px solid var(--border);padding:3px 9px;font-family:'Cinzel',serif;font-size:9px;color:var(--text);pointer-events:none;z-index:5}
-#res-tooltip{position:absolute;background:rgba(6,8,14,.95);border:1px solid var(--gold);padding:7px 10px;font-size:9.5px;pointer-events:none;z-index:20;display:none;min-width:140px}
+#season-banner{display:none}
+#res-tooltip{position:absolute;background:rgba(6,8,14,.95);border:1px solid var(--gold);padding:clamp(5px,.7vh,10px) clamp(7px,.9vw,13px);font-size:clamp(9px,.9vw,13px);pointer-events:none;z-index:20;display:none;min-width:clamp(120px,14vw,180px)}
 .rt-row{display:flex;justify-content:space-between;gap:10px;margin:2px 0;color:var(--text)}
 .rt-lbl{color:var(--dim)}
-
-/* SIDE PANEL */
-#side-panel{width:286px;min-width:250px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
-#sp-header{background:linear-gradient(180deg,#161008,#0e0a05);border-bottom:1px solid var(--border);padding:9px 11px;flex-shrink:0}
-.sp-rname{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);margin-bottom:2px}
-.sp-rsub{font-size:9px;color:var(--dim);font-style:italic;margin-bottom:4px}
+#side-panel{width:clamp(260px,22vw,380px);min-width:230px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+#sp-header{background:linear-gradient(180deg,#161008,#0e0a05);border-bottom:1px solid var(--border);padding:clamp(7px,1vh,13px) clamp(9px,1vw,16px);flex-shrink:0}
+.sp-rname{font-family:'Cinzel',serif;font-size:clamp(12px,1.2vw,18px);color:var(--gold);margin-bottom:2px}
+.sp-rsub{font-size:clamp(8px,.8vw,12px);color:var(--dim);font-style:italic;margin-bottom:3px}
 .sp-4{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:4px}
-.sp-box{background:rgba(0,0,0,.28);border:1px solid rgba(42,36,24,.5);padding:3px 4px;text-align:center}
-.sp-bl{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.3px}
-.sp-bv{font-family:'Cinzel',serif;font-size:12px;color:var(--text)}
+.sp-box{background:rgba(0,0,0,.28);border:1px solid rgba(42,36,24,.5);padding:clamp(2px,.3vh,5px) clamp(3px,.4vw,6px);text-align:center}
+.sp-bl{font-size:clamp(6px,.6vw,9px);color:var(--dim);text-transform:uppercase;letter-spacing:.3px}
+.sp-bv{font-family:'Cinzel',serif;font-size:clamp(11px,1.1vw,16px);color:var(--text)}
 .sp-res{display:flex;gap:3px;flex-wrap:wrap;margin:3px 0}
-.res-chip{font-size:9px;padding:1px 5px;border:1px solid rgba(80,80,40,.4);background:rgba(40,40,20,.3)}
-.badge{display:inline-block;padding:2px 5px;font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:1px;text-transform:uppercase;border:1px solid;margin-right:2px;margin-bottom:3px}
+.res-chip{font-size:clamp(8px,.8vw,11px);padding:1px 5px;border:1px solid rgba(80,80,40,.4);background:rgba(40,40,20,.3)}
+.badge{display:inline-block;padding:2px 5px;font-family:'Cinzel',serif;font-size:clamp(7px,.7vw,10px);letter-spacing:1px;text-transform:uppercase;border:1px solid;margin-right:2px;margin-bottom:3px}
 .badge.ours{color:#6dff6d;border-color:#1a7a1a}.badge.war{color:#ff7070;border-color:#7a1a1a}.badge.pact{color:#f0d080;border-color:#7a6a18}.badge.ally{color:#80c8ff;border-color:#2060a0}.badge.neut{color:#777;border-color:#333}.badge.cap{color:#f0d080;border-color:var(--gold)}.badge.resist{color:#ff9040;border-color:#804020}
 .ibar-wrap{margin:3px 0}
-.ibar-lbl{font-size:7.5px;color:var(--dim);display:flex;justify-content:space-between}
-.ibar{height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-top:2px}
+.ibar-lbl{font-size:clamp(7px,.7vw,10px);color:var(--dim);display:flex;justify-content:space-between}
+.ibar{height:clamp(3px,.4vh,5px);background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-top:2px}
 .ibar-fill{height:100%;border-radius:2px;transition:width .35s}
 .bld-row{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
-.bld-tag{font-size:8px;padding:2px 5px;border:1px solid var(--border);color:var(--dim)}
-#sp-actions{flex:1;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:2px}
+.bld-tag{font-size:clamp(7px,.7vw,10px);padding:2px 5px;border:1px solid var(--border);color:var(--dim)}
+#sp-actions{flex:1;overflow-y:auto;padding:clamp(4px,.6vh,8px) clamp(8px,.9vw,14px);display:flex;flex-direction:column;gap:2px}
 #sp-actions::-webkit-scrollbar{width:2px}
 #sp-actions::-webkit-scrollbar-thumb{background:var(--border)}
-.sp-sec{font-family:'Cinzel',serif;font-size:7.5px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;padding:4px 0 2px;border-bottom:1px solid rgba(42,36,24,.35);margin-top:3px}
-.abtn{width:100%;padding:6px 9px;background:rgba(0,0,0,.2);border:1px solid var(--border);color:var(--text);font-family:'IM Fell English',serif;font-size:11px;cursor:pointer;transition:all .11s;text-align:left;display:flex;align-items:center;gap:7px}
+.sp-sec{font-family:'Cinzel',serif;font-size:clamp(7px,.7vw,11px);color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;padding:clamp(4px,.5vh,7px) 0 3px;border-bottom:1px solid rgba(42,36,24,.35);margin-top:4px}
+.abtn{width:100%;padding:clamp(5px,.7vh,9px) clamp(7px,.8vw,12px);background:rgba(0,0,0,.2);border:1px solid var(--border);color:var(--text);font-family:'IM Fell English',serif;font-size:clamp(10px,1vw,15px);cursor:pointer;transition:all .11s;text-align:left;display:flex;align-items:center;gap:clamp(5px,.6vw,10px)}
 .abtn:hover:not(:disabled){background:rgba(201,168,76,.06);border-color:var(--gold);color:var(--gold)}
 .abtn:disabled{opacity:.22;cursor:not-allowed}
 .abtn.war-btn:hover:not(:disabled){border-color:var(--red2);color:#ff7070;background:rgba(130,26,26,.09)}
 .abtn.peace-btn:hover:not(:disabled){border-color:var(--green2);color:#7aff7a;background:rgba(26,100,40,.09)}
 .abtn.active-mode{border-color:#50ff50;color:#80ff80;background:rgba(26,120,26,.12)}
 .abtn.active-naval{border-color:#50c8ff;color:#80e8ff;background:rgba(20,80,140,.15)}
-.abtn .ic{font-size:13px;flex-shrink:0}
+.abtn .ic{font-size:clamp(13px,1.4vw,20px);flex-shrink:0}
 .abtn .al{display:flex;flex-direction:column}
-.abtn .am{font-size:11px}
-.abtn .as{font-size:7.5px;color:var(--dim);margin-top:1px}
-#sp-end{padding:7px 10px 8px;flex-shrink:0;border-top:1px solid var(--border)}
-#sp-log{border-top:1px solid var(--border);height:110px;flex-shrink:0;display:flex;flex-direction:column}
-.sp-log-title{font-family:'Cinzel',serif;font-size:7.5px;color:var(--dim);letter-spacing:2px;padding:3px 9px;border-bottom:1px solid rgba(42,36,24,.4);background:rgba(0,0,0,.2)}
-#log{flex:1;overflow-y:auto;padding:2px 7px;font-size:9px}
+.abtn .am{font-size:clamp(10px,1vw,15px)}
+.abtn .as{font-size:clamp(7px,.7vw,10px);color:var(--dim);margin-top:1px}
+#sp-end{padding:clamp(5px,.8vh,10px) clamp(8px,.9vw,14px);flex-shrink:0;border-top:1px solid var(--border)}
+#sp-log{border-top:1px solid var(--border);height:clamp(140px,18vh,240px);flex-shrink:0;display:flex;flex-direction:column}
+.sp-log-title{font-family:'Cinzel',serif;font-size:clamp(7px,.7vw,10px);color:var(--dim);letter-spacing:2px;padding:clamp(2px,.4vh,5px) clamp(7px,.8vw,12px);border-bottom:1px solid rgba(42,36,24,.4);background:rgba(0,0,0,.2);display:flex;justify-content:space-between;align-items:center}
+.sp-log-clear{font-size:clamp(7px,.7vw,10px);color:var(--dim);cursor:pointer;padding:2px 4px;transition:color .12s}
+.sp-log-clear:hover{color:var(--red2)}
+#log{flex:1;overflow-y:auto;padding:2px clamp(5px,.6vw,9px);font-size:clamp(9px,.9vw,13px)}
 #log::-webkit-scrollbar{width:2px}
 #log::-webkit-scrollbar-thumb{background:var(--border)}
-.le{padding:2px 0;border-bottom:1px solid rgba(42,36,24,.1);line-height:1.4;display:flex;gap:3px}
-.lt{color:var(--dim);flex-shrink:0;font-size:7.5px}
+.le{padding:3px 0;border-bottom:1px solid rgba(42,36,24,.1);line-height:1.5;display:flex;gap:4px;align-items:baseline}
+.le-new{transform:translateX(-20px);opacity:0}
+.le-anim{transform:translateX(0)!important;opacity:1!important;transition:transform .35s cubic-bezier(.2,.8,.4,1),opacity .3s ease}
+.lt{color:var(--dim);flex-shrink:0;font-size:clamp(7px,.7vw,10px);min-width:clamp(40px,5vw,60px)}
 .lm.war{color:#ff8888}.lm.peace{color:#80e880}.lm.diplo{color:#80a8f8}.lm.event{color:#e0c060}.lm.info{color:#606060}.lm.vic{color:var(--gold2)}.lm.build{color:#70c0f8}.lm.revolt{color:#f06020}.lm.ideo{color:#b080f0}.lm.move{color:#80e880}.lm.naval{color:#60e8ff}.lm.resist{color:#ff9040}.lm.loan{color:#c0e080}.lm.season{color:#a0c8f0}
-
-/* MOBILE */
 #bottom{background:var(--panel);border-top:1px solid var(--border);flex-shrink:0;display:none}
 #tabs{display:flex;border-bottom:1px solid var(--border)}
 .tab{flex:1;padding:6px 2px;font-family:'Cinzel',serif;font-size:clamp(7px,2vw,9px);letter-spacing:.6px;text-transform:uppercase;color:var(--dim);background:transparent;border:none;cursor:pointer;transition:all .12s;text-align:center;border-bottom:2px solid transparent}
@@ -144,8 +223,6 @@ body{background:var(--dark);color:var(--text);font-family:'IM Fell English',seri
 .ri-box{background:rgba(0,0,0,.25);border:1px solid rgba(42,36,24,.45);padding:3px 4px;text-align:center}
 .ri-bl{font-size:6.5px;color:var(--dim);text-transform:uppercase}
 .ri-bv{font-family:'Cinzel',serif;font-size:11px;color:var(--text)}
-
-/* MODAL */
 #mo{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:flex-end;justify-content:center;z-index:200}
 #mo.on{display:flex}
 #mb{background:linear-gradient(155deg,#1a1208,#0c0804);border:1px solid var(--gold);border-bottom:none;padding:14px 13px 20px;width:100%;max-width:520px;max-height:90dvh;overflow-y:auto;box-shadow:0 -4px 28px rgba(201,168,76,.14)}
@@ -168,16 +245,9 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 .tn{font-family:'Cinzel',serif;font-size:10px;color:var(--text)}
 .ta{font-size:8px;color:var(--dim);text-align:right}
 .ideo-mo-list{display:flex;flex-direction:column;gap:4px;margin-top:7px}
-.ideo-mo-card{padding:8px 10px;background:rgba(0,0,0,.28);border:1px solid var(--border);cursor:pointer;transition:all .11s}
+.ideo-mo-card{padding:8px 10px;background:rgba(0,0,0,.28);border:1px solid var(--border);cursor:pointer;transition:all .11s;display:flex;align-items:center;gap:10px}
 .ideo-mo-card:hover{border-color:var(--border2)}
-.ideo-mo-head{display:flex;align-items:center;gap:7px;margin-bottom:3px}
-.ideo-mo-icon{font-size:14px}
-.ideo-mo-name{font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px}
-.ideo-mo-stats{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.ideo-mo-stat{font-size:8px;line-height:1.5}
 .imp{color:#60cc50}.imm{color:#cc5048}
-
-/* BATTLE */
 #s-battle{align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:14px;background:radial-gradient(ellipse at center,#180a08,#030101)}
 .btitle{font-family:'Cinzel Decorative',serif;font-size:clamp(14px,4.5vw,24px);color:var(--gold);letter-spacing:3px;text-shadow:0 0 28px rgba(201,168,76,.4)}
 .bfield{display:flex;align-items:center;gap:20px;width:100%;max-width:420px}
@@ -198,8 +268,6 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 .bres{font-family:'Cinzel',serif;font-size:clamp(11px,3vw,15px);text-align:center;letter-spacing:1.5px;padding:7px 14px;border:1px solid;opacity:0;transition:opacity .4s}
 .bres.win{color:#80ff80;border-color:#3a9c28;background:rgba(58,156,40,.08)}.bres.lose{color:#ff7070;border-color:#c03030;background:rgba(192,48,48,.08)}.bres.show{opacity:1}
 .bbonus{font-size:8.5px;color:var(--dim);text-align:center;margin-top:2px}
-
-/* END SCREENS */
 #s-victory,#s-defeat{align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:18px}
 #s-victory{background:radial-gradient(ellipse at center,#1a1406,#040402)}
 #s-defeat{background:radial-gradient(ellipse at center,#160304,#020101)}
@@ -209,35 +277,263 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 .esub{font-size:clamp(10px,2.5vw,13px);color:var(--dim);font-style:italic;max-width:360px;line-height:1.7}
 #popup{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--border2);padding:7px 14px;font-size:10px;color:var(--text);max-width:310px;width:calc(100% - 20px);z-index:300;opacity:0;transition:opacity .2s;pointer-events:none;text-align:center}
 #popup.on{opacity:1}
+/* SAVE MODAL */
+.save-slot{display:flex;align-items:center;gap:10px;padding:9px 11px;background:rgba(0,0,0,.28);border:1px solid var(--border);margin-bottom:5px;transition:all .12s}
+.save-slot-num{font-family:'Cinzel',serif;font-size:11px;color:var(--dim);flex-shrink:0;width:18px;text-align:center}
+.save-slot-info{flex:1;min-width:0}
+.save-slot-name{font-family:'Cinzel',serif;font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save-slot-sub{font-size:8px;color:var(--dim);margin-top:2px}
+.save-slot-btns{display:flex;gap:3px;flex-shrink:0}
+.ssb{padding:4px 7px;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;cursor:pointer;transition:all .11s;text-transform:uppercase}
+.ssb:hover{border-color:var(--gold);color:var(--gold)}
+.ssb.del:hover{border-color:#7a1a1a;color:#ff7070}
+.empty-slot{cursor:pointer;opacity:.6}
+.empty-slot:hover{opacity:1;border-color:var(--border2)}
+/* ── MULTIPLAYER ─────────────────────────────────────────── */
+#s-mp{position:relative;overflow:hidden;background:#06080e;align-items:center;justify-content:center;flex-direction:column}
+#s-mp canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.18;pointer-events:none}
+.mp-panel{position:relative;z-index:2;width:min(560px,100%);padding:clamp(16px,3vh,32px) clamp(14px,3vw,28px);display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:100dvh}
+.mp-title{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,3vw,28px);color:var(--gold);letter-spacing:3px;text-shadow:0 0 20px rgba(201,168,76,.3)}
+.mp-rule{height:1px;background:linear-gradient(90deg,transparent,var(--border2) 40%,var(--border2) 60%,transparent)}
+.mp-section{display:flex;flex-direction:column;gap:8px}
+.mp-lbl{font-size:8px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;font-family:'Cinzel',serif}
+.mp-card{background:rgba(0,0,0,.35);border:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s}
+.mp-card:hover{border-color:var(--border2)}
+.mp-card-title{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:8px}
+.mp-card-desc{font-size:10px;color:var(--dim);line-height:1.6}
+.mp-inp{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--text);font-family:'Cinzel',serif;font-size:14px;padding:9px 12px;outline:none;letter-spacing:3px;text-transform:uppercase;transition:border .15s;text-align:center}
+.mp-inp:focus{border-color:var(--gold)}
+.mp-inp::placeholder{color:var(--dim);letter-spacing:1px;text-transform:none;font-size:11px}
+.mp-status-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,.3);border:1px solid var(--border)}
+.mp-dot{width:8px;height:8px;border-radius:50%;background:#555;flex-shrink:0;transition:background .4s;box-shadow:0 0 6px currentColor}
+.mp-status-txt{font-family:'Cinzel',serif;font-size:9px;color:var(--dim);letter-spacing:1px}
+#mp-log{overflow-y:auto;max-height:140px;padding:4px 0}
+#mp-log::-webkit-scrollbar{width:2px}
+#mp-log::-webkit-scrollbar-thumb{background:var(--border)}
+@keyframes mpFadeIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.mp-room-display{display:none;flex-direction:column;gap:6px}
+.mp-room-code{font-family:'Cinzel',serif;font-size:clamp(20px,3vw,32px);color:var(--gold);letter-spacing:6px;text-align:center;padding:12px;background:rgba(201,168,76,.06);border:1px solid var(--gold);cursor:pointer;transition:background .15s;position:relative}
+.mp-room-code:hover{background:rgba(201,168,76,.1)}
+.mp-copy-hint{font-size:8px;color:var(--dim);text-align:center;letter-spacing:2px}
+.mp-waiting{display:none;align-items:center;gap:8px;font-size:10px;color:var(--dim)}
+.mp-spinner{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:mpSpin .8s linear infinite;flex-shrink:0}
+@keyframes mpSpin{to{transform:rotate(360deg)}}
+#mp-guest-pick-panel{display:none;flex-direction:column;gap:8px}
+#mp-guest-nation-list{overflow-y:auto;max-height:200px}
+#mp-guest-nation-list .mp-nat-row:hover{border-color:var(--border2)!important;background:rgba(201,168,76,.04)!important}
+#mp-guest-waiting{display:none;align-items:center;justify-content:center;gap:10px;padding:20px;color:var(--dim);font-size:11px;font-style:italic}
+/* In-game MP bar */
+#mp-ingame-bar{display:none;align-items:center;gap:6px;padding:0 8px;border-right:1px solid rgba(42,36,24,.5);height:38px;flex-shrink:0}
+#mp-ig-dot{width:7px;height:7px;border-radius:50%;background:#555;transition:background .3s;flex-shrink:0}
+#mp-ig-txt{font-family:'Cinzel',serif;font-size:8px;color:var(--dim);letter-spacing:1px;white-space:nowrap}
+/* Chat */
+.mp-chat-wrap{display:flex;gap:6px;margin-top:4px}
+#mp-chat-inp{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--text);font-family:'IM Fell English',serif;font-size:11px;padding:5px 9px;outline:none}
+#mp-chat-inp:focus{border-color:var(--border2)}
+/* Turn overlay */
+#mp-turn-overlay{display:none;position:absolute;inset:0;background:rgba(6,8,14,.55);z-index:10;align-items:center;justify-content:center;flex-direction:column;gap:12px;pointer-events:all}
+.mp-turn-msg{font-family:'Cinzel Decorative',serif;font-size:clamp(16px,3vw,24px);color:var(--gold);letter-spacing:3px;text-align:center;text-shadow:0 0 20px rgba(201,168,76,.4)}
+.mp-turn-sub{font-size:11px;color:var(--dim);font-style:italic}
+@media(max-width:700px){#bottom{display:none!important}#side-panel{display:none!important}}
 @media(max-width:700px){#game-body{flex-direction:column}#side-panel{display:none!important}#bottom{display:block!important}}
 @media(min-width:701px){#bottom{display:none!important}#side-panel{display:flex!important}}
+
+/* ── PROVINCE POPUP ──────────────────────────────────────── */
+#prov-popup{filter:drop-shadow(0 4px 20px rgba(0,0,0,.8))}
+#prov-popup-inner{background:linear-gradient(155deg,#1c1308,#0e0804);border:1px solid var(--border2);padding:clamp(8px,1vh,13px) clamp(10px,1vw,16px);min-width:clamp(170px,18vw,240px);max-width:clamp(200px,22vw,300px);position:relative}
+#prov-popup-inner::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:9px solid #4a3e28}
+.pp-name{font-family:'Cinzel',serif;font-size:clamp(11px,1.1vw,15px);color:var(--gold);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp-sub{font-size:clamp(8px,.8vw,11px);color:var(--dim);font-style:italic;margin-bottom:7px}
+.pp-stats{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:8px}
+.pp-stat{background:rgba(0,0,0,.3);border:1px solid rgba(42,36,24,.4);padding:3px 6px}
+.pp-sl{font-size:clamp(6px,.55vw,8px);color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.pp-sv{font-family:'Cinzel',serif;font-size:clamp(10px,.95vw,13px);color:var(--text)}
+.pp-btns{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.pp-btn{flex:1;min-width:0;padding:clamp(4px,.5vh,7px) 5px;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:clamp(7px,.65vw,9px);letter-spacing:.8px;cursor:pointer;transition:all .12s;text-transform:uppercase;text-align:center;white-space:nowrap}
+.pp-btn:hover:not(:disabled){border-color:var(--border2);color:var(--text)}
+.pp-btn:disabled{opacity:.3;cursor:not-allowed}
+.pp-btn.atk{border-color:rgba(180,40,40,.5);color:#ff8080}
+.pp-btn.atk:hover:not(:disabled){border-color:var(--red2);color:#ff5050;background:rgba(130,20,20,.15)}
+.pp-btn.ours{border-color:rgba(40,160,40,.4);color:#70e870}
+.pp-btn.ours:hover:not(:disabled){border-color:var(--green2);background:rgba(20,80,20,.15)}
+.pp-close{position:absolute;top:4px;right:6px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;line-height:1;padding:2px;transition:color .12s}
+.pp-close:hover{color:var(--text)}
+@keyframes ppIn{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.pp-anim{animation:ppIn .16s cubic-bezier(.2,.8,.4,1) both}
 </style>
 </head>
 <body>
+
 <!-- INTRO -->
 <div class="scr on" id="s-intro">
   <canvas id="intro-map-canvas"></canvas>
-  <div id="intro-vignette"></div>
-  <div id="intro-content">
-    <div class="i-eyebrow">Grand Strategy · 1936</div>
+  <div class="intro-content">
+    <div class="i-sword">⚔</div>
     <div class="i-title">Time of Conquest</div>
     <div class="i-rule"></div>
-    <button class="btn" onclick="show('setup')" style="margin-top:16px;padding:13px 38px;font-size:12px;letter-spacing:3px">▶ Begin Campaign</button>
+    <button class="btn" onclick="show('worlds');refreshWorldsList()" style="margin-top:12px">▶ Single Player</button>
+    <button class="btn" onclick="show('mp')" style="border-color:#4080c0;color:#80b8f0">⚡ Multiplayer</button>
+  </div>
+</div>
+
+<!-- MULTIPLAYER LOBBY -->
+<div class="scr" id="s-mp">
+  <canvas id="mp-map-bg"></canvas>
+  <div class="mp-panel">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div class="mp-title">⚡ Multiplayer</div>
+      <button class="worlds-back" onclick="try{MP.disconnect();}catch(e){}show('intro')">← Back</button>
+    </div>
+    <div class="mp-rule"></div>
+
+    <!-- Status bar -->
+    <div class="mp-status-bar">
+      <div class="mp-dot" id="mp-status-dot"></div>
+      <div class="mp-status-txt" id="mp-status-text">Not connected</div>
+    </div>
+
+    <!-- HOST section -->
+    <div class="mp-section">
+      <div class="mp-lbl">Create a Room</div>
+      <div class="mp-card">
+        <div class="mp-card-title">🏰 Host Game</div>
+        <div class="mp-card-desc">Create a room and share the code with your friend. You pick your nation, they pick theirs.</div>
+
+        <!-- Nation picker for host -->
+        <div>
+          <div class="mp-lbl" style="margin-bottom:5px">Your Nation</div>
+          <div id="mp-host-nation-list" style="overflow-y:auto;max-height:160px;display:flex;flex-direction:column;gap:2px"></div>
+        </div>
+
+        <button class="btn full" id="mp-create-btn" onclick="mpCreateRoom()" disabled>Create Room</button>
+
+        <!-- Room ID display (shown after room created) -->
+        <div class="mp-room-display" id="mp-room-display">
+          <div class="mp-lbl">Share this code with your friend</div>
+          <div class="mp-room-code" id="mp-room-id" onclick="mpCopyId()" title="Click to copy">—</div>
+          <div class="mp-copy-hint">CLICK TO COPY · SEND VIA CHAT</div>
+          <div class="mp-waiting" id="mp-waiting-text">
+            <div class="mp-spinner"></div>
+            Waiting for guest to join…
+          </div>
+          <!-- Guest nation display once joined -->
+          <div id="mp-guest-joined" style="display:none">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(40,100,40,.15);border:1px solid var(--green2);font-size:10px;color:var(--green2)">
+              ✓ Guest joined as <b id="mp-guest-nation" style="margin-left:4px">—</b>
+            </div>
+            <button class="btn full grn" id="mp-start-game-btn" onclick="MP.startMultiplayerGame()" disabled style="margin-top:6px">⚔ Start Game</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOIN section -->
+    <div class="mp-section">
+      <div class="mp-lbl">Join a Room</div>
+      <div class="mp-card">
+        <div class="mp-card-title">🚩 Join Game</div>
+        <div class="mp-card-desc">Enter the room code your friend created.</div>
+        <input class="mp-inp" id="mp-join-id" placeholder="Enter room code…" maxlength="36" oninput="this.value=this.value.toUpperCase()">
+
+        <!-- Guest nation picker (shown after connecting) -->
+        <div id="mp-guest-pick-panel">
+          <div class="mp-lbl" style="margin-bottom:5px">Pick Your Nation</div>
+          <div id="mp-guest-nation-list"></div>
+          <button class="btn full grn" id="mp-join-ready-btn" onclick="MP.guestReady()" disabled style="margin-top:6px">✓ Ready</button>
+        </div>
+
+        <div id="mp-guest-waiting">
+          <div class="mp-spinner"></div>
+          Waiting for host to start the game…
+        </div>
+
+        <button class="btn full" id="mp-join-btn" onclick="mpJoinRoom()" style="border-color:#4080c0;color:#80b8f0">Join Room</button>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="mp-section">
+      <div class="mp-lbl">Connection Log</div>
+      <div class="mp-card" style="padding:8px 12px">
+        <div id="mp-log" style="font-family:'IM Fell English',serif"></div>
+        <!-- Chat -->
+        <div class="mp-chat-wrap" id="mp-chat-area" style="display:none">
+          <input id="mp-chat-inp" placeholder="Send message…" maxlength="80" onkeydown="if(event.key==='Enter'){MP.sendChat(this.value);this.value='';}">
+          <button class="btn" onclick="MP.sendChat(document.getElementById('mp-chat-inp').value);document.getElementById('mp-chat-inp').value=''" style="padding:5px 12px;font-size:9px">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:9px;color:var(--dim);text-align:center;line-height:1.8;font-style:italic">
+      Uses WebRTC P2P — connection is direct after handshake.<br>
+      Works on same network. May need TURN server behind strict NAT.
+    </div>
+  </div>
+</div>
+
+<!-- WORLDS -->
+<div class="scr" id="s-worlds">
+  <canvas id="worlds-map-bg"></canvas>
+  <div id="worlds-panel">
+    <div class="worlds-header">
+      <div class="worlds-title">⚔ Campaigns</div>
+      <button class="worlds-back" onclick="show('intro')">← Back</button>
+    </div>
+    <div class="worlds-rule"></div>
+    <div class="worlds-actions">
+      <button class="btn" onclick="initNewCampaign();show('setup')">＋ New Campaign</button>
+      <button class="btn dim" onclick="importSave()">↑ Import File</button>
+    </div>
+    <div class="worlds-section-lbl">Saved Worlds</div>
+    <div id="worlds-list"><div class="world-empty">No saved campaigns yet.<br>Create your first world above.</div></div>
   </div>
 </div>
 
 <!-- SETUP -->
 <div class="scr" id="s-setup">
-  <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:10px;overflow-y:auto">
-    <div class="sbox">
-      <div class="stitle">New Campaign — 1936</div>
-      <div class="slbl">Leader name</div>
-      <input class="sinp" id="rname" type="text" placeholder="The Chancellor..." maxlength="26">
-      <div class="slbl">Starting nation</div>
-      <div class="rgrid" id="rgrid"></div>
-      <div class="slbl">Ideology (determined by nation)</div>
-      <div id="ideo-grid" style="margin-bottom:14px;min-height:32px"></div>
-      <button class="btn full" id="startbtn" onclick="startGame()" disabled>⚔ Begin Conquest</button>
+  <div id="setup-map-side">
+    <canvas id="setup-map-canvas"></canvas>
+    <div id="setup-map-label"></div>
+  </div>
+  <div id="setup-panel">
+    <div id="setup-panel-inner">
+      <button class="setup-back-btn" onclick="show('worlds');refreshWorldsList()">← Worlds</button>
+      <div class="camp-title-wrap" id="camp-title-wrap" title="Click to rename">
+        <div class="setup-section-title" id="camp-title-display">NEW CAMPAIGN</div>
+        <input class="camp-title-input" id="camp-title-input" type="text" maxlength="28" value="NEW CAMPAIGN" style="display:none">
+        <span class="camp-title-edit-icon">✎</span>
+      </div>
+      <div class="setup-block">
+        <div class="setup-lbl">ERA</div>
+        <div class="era-carousel" id="era-carousel">
+          <button class="era-arrow" id="era-prev" onclick="eraStep(-1)">‹</button>
+          <div class="era-track-outer" id="era-track-outer">
+            <div class="era-fog-l"></div>
+            <div class="era-track" id="era-track"></div>
+            <div class="era-fog-r"></div>
+          </div>
+          <button class="era-arrow" id="era-next" onclick="eraStep(1)">›</button>
+        </div>
+      </div>
+      <div class="setup-block">
+        <div class="setup-lbl">LEADER NAME</div>
+        <input class="sinp" id="rname" type="text" placeholder="The Chancellor…" maxlength="26">
+      </div>
+      <div class="setup-block setup-nations-block">
+        <div class="setup-lbl">SELECT NATION</div>
+        <div id="nation-list"></div>
+      </div>
+      <div id="nation-info-card" style="display:none">
+        <div id="nic-header">
+          <div id="nic-flag"></div>
+          <div><div id="nic-name"></div><div id="nic-ideo"></div></div>
+        </div>
+        <div id="nic-stats"></div>
+        <div id="nic-traits"></div>
+      </div>
+      <button class="btn full" id="startbtn" onclick="startGame()" disabled style="margin-top:auto;padding:clamp(9px,1.5vh,14px) 0;font-size:clamp(11px,1.4vw,13px);letter-spacing:3px">⚔ BEGIN CONQUEST</button>
     </div>
   </div>
 </div>
@@ -253,7 +549,14 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
     <div class="hstat"><div class="hsl">Army</div><div class="hsv" id="h-arm">—</div></div>
     <div class="hstat" id="h-supply-st"><div class="hsl">Supply</div><div class="hsv" id="h-supply">—</div></div>
     <div class="hstat"><div class="hsl">Pop.</div><div class="hsv" id="h-pop">—</div></div>
+    <div class="hstat" id="h-sat-st"><div class="hsl">Satisf.</div><div class="hsv" id="h-sat">—</div></div>
+    <div class="hstat" id="h-reform-st" style="display:none"><div class="hsl">Reform</div><div class="hsv warn" id="h-reform-txt">—</div></div>
     <div class="hud-spacer"></div>
+    <div id="mp-ingame-bar">
+      <div id="mp-ig-dot"></div>
+      <span id="mp-ig-txt">MP</span>
+    </div>
+    <button class="save-btn-hud" onclick="openSaveMenu()">💾 Save</button>
     <div id="hud-ideo"></div>
     <div class="zoom-btns">
       <button class="zbtn" onclick="zoomBy(1.28)">+</button>
@@ -270,7 +573,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
   <div id="game-body">
     <div id="map-wrap">
       <div id="move-banner">🚶 MOVE MODE</div>
-      <div id="season-banner" id="season-banner">☀️ Summer</div>
+      <div id="season-banner">☀️ Summer</div>
       <div id="res-tooltip">
         <div class="rt-row"><span class="rt-lbl">🛢️ Oil</span><span id="tt-oil">0</span></div>
         <div class="rt-row"><span class="rt-lbl">⚫ Coal</span><span id="tt-coal">0</span></div>
@@ -278,6 +581,15 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
         <div class="rt-row"><span class="rt-lbl">⚙️ Steel</span><span id="tt-steel">0</span></div>
       </div>
       <canvas id="map-canvas"></canvas>
+      <!-- Province info popup (appears above clicked hex) -->
+      <div id="prov-popup" style="display:none;position:absolute;z-index:15;pointer-events:auto">
+        <div id="prov-popup-inner"></div>
+      </div>
+      <div id="mp-turn-overlay">
+        <div class="mp-turn-msg">Opponent's Turn</div>
+        <div class="mp-turn-sub">Waiting for them to advance the month…</div>
+        <div class="mp-spinner" style="width:20px;height:20px;border-width:3px"></div>
+      </div>
     </div>
     <div id="side-panel">
       <div id="sp-header">
@@ -295,40 +607,40 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
           <div class="ibar-lbl"><span>Instability</span><span id="sp-iv">0%</span></div>
           <div class="ibar"><div class="ibar-fill" id="sp-if"></div></div>
         </div>
+        <div class="ibar-wrap" id="sp-sat-bar" style="display:none">
+          <div class="ibar-lbl"><span>😊 Satisfaction</span><span id="sp-sat-val">0%</span></div>
+          <div class="ibar"><div class="ibar-fill" id="sp-sat-fill"></div></div>
+        </div>
+        <div id="sp-con" style="display:none;margin:3px 0"></div>
         <div class="bld-row" id="sp-blds"></div>
       </div>
       <div id="sp-actions">
-        <div class="sp-sec">Movement</div>
-        <button class="abtn" id="sp-btn-move" onclick="toggleMoveMode()" disabled>
-          <span class="ic">🚶</span><span class="al"><span class="am">Move Army</span><span class="as" id="sp-move-sub">Select your territory</span></span>
-        </button>
-        <button class="abtn" id="sp-btn-naval" onclick="toggleNavalMode()" disabled>
-          <span class="ic">⚓</span><span class="al"><span class="am">Naval Transport</span><span class="as" id="sp-naval-sub">Need port + coast</span></span>
-        </button>
-        <div class="sp-sec">Economy</div>
-        <button class="abtn" onclick="openLoan()"><span class="ic">🏦</span><span class="al"><span class="am">Take a loan</span><span class="as" id="sp-loan-sub">World Bank · 500/1000/2000g</span></span></button>
-        <button class="abtn" onclick="openBuild()"><span class="ic">🏗</span><span class="al"><span class="am">Construct building</span><span class="as" id="sp-bld-sub">Select your territory</span></span></button>
-        <div class="sp-sec">Military</div>
-        <button class="abtn" onclick="openDraft()"><span class="ic">🪖</span><span class="al"><span class="am">Conscript soldiers</span><span class="as">1,000 pop + 1 gold/soldier</span></span></button>
-        <button class="abtn war-btn" id="sp-btn-atk" onclick="openAttack()" disabled>
-          <span class="ic">⚔</span><span class="al"><span class="am">Declare war / Attack</span><span class="as" id="sp-atk-sub">Select enemy territory</span></span>
-        </button>
-        <button class="abtn" onclick="openSponsor()"><span class="ic">🔥</span><span class="al"><span class="am">Sponsor resistance</span><span class="as">Destabilize enemy territory</span></span></button>
-        <div class="sp-sec">Diplomacy</div>
-        <button class="abtn" onclick="openAllianceMenu()"><span class="ic">🤝</span><span class="al"><span class="am">Alliances & Pacts</span><span class="as" id="sp-ally-sub">NAP · Alliance · Ultimatum</span></span></button>
-        <button class="abtn peace-btn" onclick="openPeace()"><span class="ic">🕊</span><span class="al"><span class="am">Peace negotiations</span><span class="as">End a war</span></span></button>
-        <button class="abtn" onclick="openMarionette()"><span class="ic">🎭</span><span class="al"><span class="am">Puppet state</span><span class="as">Leave captured nation as vassal</span></span></button>
-        <div class="sp-sec">Government</div>
-        <button class="abtn" onclick="openRevolution()"><span class="ic">🔥</span><span class="al"><span class="am">Revolution</span><span class="as">Change ideology · 500 gold</span></span></button>
+        <div class="sp-sec">⚔ Military Actions</div>
+        <button class="abtn war-btn" id="sp-btn-atk" onclick="openAttack()" disabled><span class="ic">⚔</span><span class="al"><span class="am">Attack / Declare War</span><span class="as" id="sp-atk-sub">Select adjacent enemy territory</span></span></button>
+        <button class="abtn" onclick="openDraft()"><span class="ic">🪖</span><span class="al"><span class="am">Conscript Soldiers</span><span class="as">1,000 pop · 1 gold per soldier</span></span></button>
+        <button class="abtn" id="sp-btn-move" onclick="toggleMoveMode()" disabled><span class="ic">🚶</span><span class="al"><span class="am">Move Army</span><span class="as" id="sp-move-sub">Select your territory first</span></span></button>
+        <button class="abtn" id="sp-btn-naval" onclick="toggleNavalMode()" disabled><span class="ic">⚓</span><span class="al"><span class="am">Naval Transport</span><span class="as" id="sp-naval-sub">Needs port + coastal territory</span></span></button>
+        <div class="sp-sec">🏗 Economy & Building</div>
+        <button class="abtn" onclick="openBuild()"><span class="ic">🏗</span><span class="al"><span class="am">Construct Building</span><span class="as" id="sp-bld-sub">Select your territory first</span></span></button>
+        <button class="abtn" onclick="openLoan()"><span class="ic">🏦</span><span class="al"><span class="am">Take a Loan</span><span class="as" id="sp-loan-sub">World Bank · 500 / 1000 / 2000g</span></span></button>
+        <div class="sp-sec">🤝 Diplomacy</div>
+        <button class="abtn" onclick="openAllianceMenu()"><span class="ic">🤝</span><span class="al"><span class="am">Alliances & Non-Aggression</span><span class="as" id="sp-ally-sub">Form pacts, alliances, ultimatums</span></span></button>
+        <button class="abtn peace-btn" onclick="openPeace()"><span class="ic">🕊</span><span class="al"><span class="am">Peace Negotiations</span><span class="as">Propose ceasefire to end a war</span></span></button>
+        <button class="abtn" onclick="openMarionette()"><span class="ic">🎭</span><span class="al"><span class="am">Install Puppet State</span><span class="as">Leave captured nation as vassal</span></span></button>
+        <button class="abtn" onclick="openSponsor()"><span class="ic">🕵</span><span class="al"><span class="am">Sponsor Resistance</span><span class="as">Covertly destabilize enemy territory</span></span></button>
+        <div class="sp-sec">🏛 Government</div>
+        <button class="abtn" onclick="openReform()"><span class="ic">⚖</span><span class="al"><span class="am">Reform Government</span><span class="as">Change ideology — cost depends on distance</span></span></button>
       </div>
-      <div id="sp-end"><button class="btn full" id="end-btn" onclick="endTurn()">Advance Month ›</button></div>
+      <div id="sp-end"><button class="btn full" id="end-btn" onclick="endTurn()">Advance Week ›</button></div>
       <div id="sp-log">
-        <div class="sp-log-title">War Dispatch</div>
+        <div class="sp-log-title">
+          <span>⚔ War Dispatch</span>
+          <span class="sp-log-clear" onclick="document.getElementById('log').innerHTML='<div style=\'color:var(--dim);text-align:center;padding:7px;font-size:9px\'>Cleared</div>'">✕ clear</span>
+        </div>
         <div id="log"><div style="color:var(--dim);text-align:center;padding:7px;font-size:9px">No events yet</div></div>
       </div>
     </div>
   </div>
-  <!-- MOBILE BOTTOM -->
   <div id="bottom">
     <div id="tabs">
       <button class="tab on" onclick="switchTab('info')" id="tab-info">📍 Region</button>
@@ -337,8 +649,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
       <button class="tab" onclick="switchTab('log')" id="tab-log">📜 Log</button>
     </div>
     <div class="tpane on" id="pane-info">
-      <div class="ri-name" id="ri-nm">Select territory</div>
-      <div id="ri-bdg"></div>
+      <div class="ri-name" id="ri-nm">Select territory</div><div id="ri-bdg"></div>
       <div class="ri-owner" id="ri-ow"></div>
       <div class="ri-row">
         <div class="ri-box"><div class="ri-bl">Army</div><div class="ri-bv" id="ri-ar">—</div></div>
@@ -362,7 +673,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
       <button class="abtn" onclick="openSponsor()"><span class="ic">🔥</span><span class="al"><span class="am">Sponsor resistance</span></span></button>
       <button class="abtn" onclick="openLoan()"><span class="ic">🏦</span><span class="al"><span class="am">Take loan</span></span></button>
       <button class="abtn" onclick="openRevolution()"><span class="ic">🔄</span><span class="al"><span class="am">Revolution</span></span></button>
-      <div style="padding:3px 0"><button class="btn full" id="end-btn-mob" onclick="endTurn()">Advance Month ›</button></div>
+      <div style="padding:3px 0"><button class="btn full" id="end-btn-mob" onclick="endTurn()">Advance Week ›</button></div>
     </div>
     <div class="tpane" id="pane-diplo">
       <button class="abtn" onclick="openAllianceMenu()"><span class="ic">🤝</span><span class="al"><span class="am">Alliances & Pacts</span></span></button>
@@ -390,94 +701,497 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 </div>
 
 <!-- VICTORY / DEFEAT -->
-<div class="scr" id="s-victory"><div class="eico">🌍</div><div class="etit">Europa Conquered</div><div class="esub" id="vic-txt"></div><button class="btn" onclick="location.reload()">New Campaign</button></div>
-<div class="scr" id="s-defeat"><div class="eico">💀</div><div class="etit">Regime Collapsed</div><div class="esub" id="def-txt"></div><button class="btn" onclick="location.reload()">Try Again</button></div>
+<div class="scr" id="s-victory"><div class="eico">🌍</div><div class="etit">Europa Conquered</div><div class="esub" id="vic-txt"></div><button class="btn" onclick="show('worlds');refreshWorldsList()">Return to Worlds</button></div>
+<div class="scr" id="s-defeat"><div class="eico">💀</div><div class="etit">Regime Collapsed</div><div class="esub" id="def-txt"></div><button class="btn" onclick="show('worlds');refreshWorldsList()">Return to Worlds</button></div>
 
-<!-- MODAL + POPUP -->
 <div id="mo" onclick="moOut(event)"><div id="mb"><div class="mt" id="mo-t">—</div><div id="mo-b"></div><div class="mbtns" id="mo-btns"></div></div></div>
 <div id="popup"></div>
 <script src="map.js"></script>
 <script src="game.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="multiplayer.js"></script>
 <script>
-// ── INTRO ANIMATED MAP ──────────────────────────────────────
+// ── INTRO MAP ────────────────────────────────────────────────
 (function(){
-  const ic=document.getElementById('intro-map-canvas');
-  if(!ic)return;
-  const ictx=ic.getContext('2d');
-
-  // Hex colors matching the political map (nation colors)
-  const NAT_COLS=['#5c3c1a','#4a1a1a','#1e2e52','#1c3a2a','#3e2c0a','#3c1c1c','#3a1a1a','#2e2212','#2e1e0e','#1e2a1a','#222a1a','#1a2c3a','#2a322e','#1c2a32','#321a1a','#2e2212','#2a220e','#2e2a2a','#321e12','#1e2a32','#2a1e12','#222630','#2a221e','#222a1e','#2a261e','#1e2a22','#1e1e2a','#1e3222'];
-  const SEA='#08162a';
-
-  // Pan state
-  let panX=0, panDir=1, panSpeed=0.12, lastT=0;
-  let mapReady=false;
-
-  function hexP(ctx2,cx,cy,r){
-    ctx2.beginPath();
-    for(let i=0;i<6;i++){
-      const a=Math.PI/3*i-Math.PI/6;
-      i===0?ctx2.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r):ctx2.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
-    }
-    ctx2.closePath();
+  const cv=document.getElementById('intro-map-canvas');if(!cv)return;
+  const cx=cv.getContext('2d'),nc=NATIONS.map(n=>n.color),R=8/Math.sqrt(3)*1.14,W=560,H=500;
+  let px=0,pd=1,raf;
+  function rsz(){cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;}
+  function hp(x,y,r){cx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+Math.PI/3*i;i?cx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a)):cx.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));}cx.closePath();}
+  function draw(){
+    const cw=cv.width,ch=cv.height;cx.clearRect(0,0,cw,ch);
+    const sc=Math.max(ch/H*1.06,cw/W*1.06),sw=W*sc,mp=Math.max(0,sw-cw);
+    px+=.18*pd;if(px>=mp){px=mp;pd=-1;}if(px<=0){px=0;pd=1;}
+    const ox=(cw-sw)/2-(mp>0?px:0),oy=(ch-H*sc)/2;
+    cx.save();cx.translate(ox,oy);cx.scale(sc,sc);
+    cx.fillStyle='#0a0f1a';cx.fillRect(-10,-10,W+20,H+20);
+    PROVINCES.forEach(p=>{hp(p.cx,p.cy,R);cx.fillStyle=nc[p.nation]||'#1a1a2a';cx.fill();cx.strokeStyle='rgba(0,0,0,.38)';cx.lineWidth=.28;cx.stroke();});
+    cx.restore();
+    const vg=cx.createRadialGradient(cw/2,ch/2,ch*.15,cw/2,ch/2,ch*.85);
+    vg.addColorStop(0,'rgba(6,8,14,.3)');vg.addColorStop(1,'rgba(6,8,14,.82)');
+    cx.fillStyle=vg;cx.fillRect(0,0,cw,ch);
+    raf=requestAnimationFrame(draw);
   }
-
-  function drawIntroMap(t){
-    const W=ic.width, H=ic.height;
-    if(!W||!H)return;
-
-    // Animate pan: slow oscillation
-    const dt=t-lastT; lastT=t;
-    panX+=panDir*panSpeed*(dt/16);
-    if(panX>30){panDir=-1;}
-    if(panX<-30){panDir=1;}
-
-    ictx.clearRect(0,0,W,H);
-    ictx.fillStyle=SEA;
-    ictx.fillRect(0,0,W,H);
-
-    if(!window.PROVINCES||!PROVINCES.length){requestAnimationFrame(drawIntroMap);return;}
-
-    // Compute scale/offset to fit map
-    const xs=PROVINCES.map(p=>p.cx), ys=PROVINCES.map(p=>p.cy);
-    const minX=Math.min(...xs), maxX=Math.max(...xs);
-    const minY=Math.min(...ys), maxY=Math.max(...ys);
-    const mw=maxX-minX+30, mh=maxY-minY+30;
-    const s=Math.min(W/mw,H/mh)*0.92;
-    const tx=(W-mw*s)/2 - (minX-15)*s + panX;
-    const ty=(H-mh*s)/2 - (minY-15)*s;
-
-    const r=Math.max(4, mw<700 ? s*7 : s*6.5);
-
-    // Draw filled hexes
-    PROVINCES.forEach(p=>{
-      hexP(ictx,p.cx*s+tx,p.cy*s+ty,r);
-      const col=p.nation>=0?NAT_COLS[p.nation%NAT_COLS.length]:'#181618';
-      ictx.fillStyle=col;
-      ictx.fill();
-    });
-    // Draw borders
-    ictx.strokeStyle='rgba(0,0,0,.55)';
-    ictx.lineWidth=0.8;
-    PROVINCES.forEach(p=>{
-      hexP(ictx,p.cx*s+tx,p.cy*s+ty,r);
-      ictx.stroke();
-    });
-
-    requestAnimationFrame(drawIntroMap);
-  }
-
-  function resizeIntro(){
-    const wrap=document.getElementById('s-intro');
-    if(!wrap)return;
-    ic.width=wrap.clientWidth||window.innerWidth;
-    ic.height=wrap.clientHeight||window.innerHeight;
-  }
-
-  resizeIntro();
-  window.addEventListener('resize',resizeIntro);
-  requestAnimationFrame(drawIntroMap);
+  function start(){rsz();if(raf)cancelAnimationFrame(raf);draw();}
+  new MutationObserver(()=>{
+    document.getElementById('s-intro')?.classList.contains('on')?start():(cancelAnimationFrame(raf),raf=null);
+  }).observe(document.getElementById('s-intro'),{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',()=>{if(raf)rsz();});
+  start();
 })();
+
+// ── WORLDS MAP BG ────────────────────────────────────────────
+(function(){
+  const cv=document.getElementById('worlds-map-bg');if(!cv)return;
+  cv.style.position='absolute';cv.style.inset='0';cv.style.width='100%';cv.style.height='100%';cv.style.opacity='.22';
+  const cx=cv.getContext('2d'),nc=NATIONS.map(n=>n.color),R=8/Math.sqrt(3)*1.14,W=560,H=500;
+  let px=0,pd=1,raf;
+  function rsz(){cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;}
+  function hp(x,y,r){cx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+Math.PI/3*i;i?cx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a)):cx.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));}cx.closePath();}
+  function draw(){
+    const cw=cv.width,ch=cv.height;cx.clearRect(0,0,cw,ch);
+    const sc=Math.max(ch/H*1.06,cw/W*1.06),sw=W*sc,mp=Math.max(0,sw-cw);
+    px+=.14*pd;if(px>=mp){px=mp;pd=-1;}if(px<=0){px=0;pd=1;}
+    const ox=(cw-sw)/2-(mp>0?px:0),oy=(ch-H*sc)/2;
+    cx.save();cx.translate(ox,oy);cx.scale(sc,sc);
+    cx.fillStyle='#0a0f1a';cx.fillRect(-10,-10,W+20,H+20);
+    PROVINCES.forEach(p=>{hp(p.cx,p.cy,R);cx.fillStyle=nc[p.nation]||'#1a1a2a';cx.fill();cx.strokeStyle='rgba(0,0,0,.35)';cx.lineWidth=.28;cx.stroke();});
+    cx.restore();
+    const vg=cx.createRadialGradient(cw/2,ch/2,ch*.1,cw/2,ch/2,ch*.92);
+    vg.addColorStop(0,'rgba(6,8,14,.55)');vg.addColorStop(1,'rgba(6,8,14,.93)');
+    cx.fillStyle=vg;cx.fillRect(0,0,cw,ch);
+    raf=requestAnimationFrame(draw);
+  }
+  function start(){rsz();if(raf)cancelAnimationFrame(raf);draw();}
+  new MutationObserver(()=>{
+    document.getElementById('s-worlds')?.classList.contains('on')?start():(raf&&(cancelAnimationFrame(raf),raf=null));
+  }).observe(document.getElementById('s-worlds'),{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',()=>{if(raf)rsz();});
+})();
+
+// ── SAVE SYSTEM ──────────────────────────────────────────────
+const SAVE_KEY='toc1936_v2';
+const MAX_SLOTS=6;
+function getAllSaves(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'[]');}catch{return[];}}
+function setSaves(arr){try{localStorage.setItem(SAVE_KEY,JSON.stringify(arr));}catch{showToast('Storage full!');}}
+
+function saveToSlot(slot,label){
+  const saves=getAllSaves();
+  const nat=NATIONS[G.playerNation];
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const entry={
+    slot,label:label||G.leaderName||'Campaign',
+    nation:nat?.name||'?',natColor:nat?.color||'#888',
+    ideology:G.ideology,leaderName:G.leaderName,
+    gameDate:`${mo[G.month]} ${G.year}`,
+    regions:G.owner.filter(o=>o===G.playerNation).length,
+    gold:Math.round(G.gold[G.playerNation]||0),
+    saved:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
+    state:JSON.parse(JSON.stringify(G))
+  };
+  const idx=saves.findIndex(s=>s.slot===slot);
+  if(idx>=0)saves[idx]=entry;else saves.push(entry);
+  setSaves(saves);
+  showToast(`✓ Saved — Slot ${slot+1}`);
+}
+
+function loadFromSlot(slot){
+  const entry=getAllSaves().find(s=>s.slot===slot);
+  if(!entry){showToast('Save not found');return;}
+  Object.assign(G,entry.state);
+  show('game');
+  setTimeout(()=>{
+    computeHexRadius();buildCanvas();zoomReset();
+    updateHUD();updateIdeoHUD();updateSeasonUI();
+    addLog(`${G.leaderName} returns to the throne.`,'event');
+  },80);
+}
+
+function deleteSave(slot){
+  setSaves(getAllSaves().filter(s=>s.slot!==slot));
+  refreshWorldsList();
+}
+
+function exportSave(slot){
+  const entry=getAllSaves().find(s=>s.slot===slot);if(!entry)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(entry)],{type:'application/json'}));
+  a.download=`toc_${(entry.label||'save').replace(/\s+/g,'_')}.json`;
+  a.click();URL.revokeObjectURL(a.href);
+  showToast('✓ Exported');
+}
+
+window.importSave=function(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    new FileReader().addEventListener('load',ev=>{
+      try{
+        const entry=JSON.parse(ev.target.result);
+        if(!entry?.state)throw 0;
+        const saves=getAllSaves();
+        let slot=typeof entry.slot==='number'?entry.slot:saves.length;
+        if(saves.find(s=>s.slot===slot))slot=Math.max(...saves.map(s=>s.slot),-1)+1;
+        entry.slot=slot;
+        const idx=saves.findIndex(s=>s.slot===slot);
+        if(idx>=0)saves[idx]=entry;else saves.push(entry);
+        setSaves(saves);refreshWorldsList();showToast('✓ Imported');
+      }catch{showToast('Invalid save file');}
+    });
+    const fr=new FileReader();fr.onload=ev=>{
+      try{
+        const entry=JSON.parse(ev.target.result);
+        if(!entry?.state)throw 0;
+        const saves=getAllSaves();
+        let slot=typeof entry.slot==='number'?entry.slot:saves.length;
+        if(saves.find(s=>s.slot===slot))slot=Math.max(...saves.map(s=>s.slot),-1)+1;
+        entry.slot=slot;
+        const idx=saves.findIndex(s=>s.slot===slot);
+        if(idx>=0)saves[idx]=entry;else saves.push(entry);
+        setSaves(saves);refreshWorldsList();showToast('✓ Imported');
+      }catch{showToast('Invalid save file');}
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+};
+
+window.openSaveMenu=function(){
+  const saves=getAllSaves();
+  const campLabel=document.getElementById('camp-title-display')?.textContent||G.leaderName||'Campaign';
+  let html=`<p class="mx">Save <b>${G.leaderName}</b>'s campaign. Overwriting a slot replaces it.</p>`;
+  for(let i=0;i<MAX_SLOTS;i++){
+    const s=saves.find(x=>x.slot===i);
+    if(s){
+      html+=`<div class="save-slot">
+        <div class="save-slot-num">${i+1}</div>
+        <div class="save-slot-info">
+          <div class="save-slot-name">${s.label}</div>
+          <div class="save-slot-sub">${s.nation} · ${s.gameDate} · ${s.regions} reg · ${s.saved}</div>
+        </div>
+        <div class="save-slot-btns">
+          <button class="ssb" onclick="saveToSlot(${i},'${(s.label||'').replace(/'/g,'`')}');openSaveMenu()">✎</button>
+          <button class="ssb" onclick="exportSave(${i})">↓</button>
+          <button class="ssb del" onclick="deleteSave(${i});openSaveMenu()">✕</button>
+        </div>
+      </div>`;
+    }else{
+      html+=`<div class="save-slot empty-slot" onclick="saveToSlot(${i},'${campLabel.replace(/'/g,'`')}');openSaveMenu()">
+        <div class="save-slot-num">${i+1}</div>
+        <div class="save-slot-info"><div class="save-slot-name" style="color:var(--dim)">— Empty —</div><div class="save-slot-sub">Click to save here</div></div>
+      </div>`;
+    }
+  }
+  openModal('💾 Save Campaign',html,'<button class="btn" onclick="closeModal()">Close</button>');
+};
+
+window.refreshWorldsList=function(){
+  const list=document.getElementById('worlds-list');if(!list)return;
+  const saves=getAllSaves().sort((a,b)=>b.slot-a.slot);
+  if(!saves.length){
+    list.innerHTML='<div class="world-empty">No saved campaigns yet.<br>Create your first world above.</div>';
+    return;
+  }
+  list.innerHTML=saves.map(s=>`
+    <div class="world-card">
+      <div class="world-card-flag" style="background:${s.natColor}"></div>
+      <div class="world-card-info">
+        <div class="world-card-name">${s.label}</div>
+        <div class="world-card-sub">${s.leaderName} · ${s.nation} · ${s.ideology}</div>
+        <div class="world-card-stats">
+          <div class="wcs">🗺 <b>${s.regions}</b></div>
+          <div class="wcs">📅 <b>${s.gameDate}</b></div>
+          <div class="wcs">🏅 <b>${s.gold}g</b></div>
+          <div class="wcs">💾 ${s.saved}</div>
+        </div>
+      </div>
+      <div class="world-card-btns">
+        <button class="wc-btn load" onclick="loadFromSlot(${s.slot})">▶ Play</button>
+        <button class="wc-btn" onclick="exportSave(${s.slot})" title="Export">↓</button>
+        <button class="wc-btn del" onclick="if(confirm('Delete \\'${(s.label||'').replace(/'/g,'`')}\\'?')){deleteSave(${s.slot})}" title="Delete">✕</button>
+      </div>
+    </div>
+  `).join('');
+};
+
+// ── SETUP MAP + ERA CAROUSEL + NATIONS ───────────────────────
+(function(){
+  const W=560,H=500,R=8/Math.sqrt(3)*1.14;
+  let hilite=-1;
+
+  function hp(ctx,x,y,r){ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+Math.PI/3*i;i?ctx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a)):ctx.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));}ctx.closePath();}
+  function bright(hex,f){let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);r=Math.min(255,Math.round(r*f+40));g=Math.min(255,Math.round(g*f+30));b=Math.min(255,Math.round(b*f+20));return`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;}
+  function dark(hex){let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`#${Math.round(r*.35).toString(16).padStart(2,'0')}${Math.round(g*.35).toString(16).padStart(2,'0')}${Math.round(b*.35).toString(16).padStart(2,'0')}`;}
+
+  function rsz(){const cv=document.getElementById('setup-map-canvas');if(!cv)return;const side=document.getElementById('setup-map-side');if(!side)return;cv.width=side.offsetWidth;cv.height=side.offsetHeight;drawMap(hilite);}
+
+  function drawMap(hl){
+    const cv=document.getElementById('setup-map-canvas');if(!cv)return;
+    const ctx=cv.getContext('2d'),cw=cv.width,ch=cv.height;
+    const sc=Math.max(ch/H*1.04,cw/W*1.04);
+    const ox=(cw-W*sc)/2,oy=(ch-H*sc)/2;
+    ctx.clearRect(0,0,cw,ch);ctx.save();ctx.translate(ox,oy);ctx.scale(sc,sc);
+    ctx.fillStyle='#0a0f1a';ctx.fillRect(-10,-10,W+20,H+20);
+    PROVINCES.forEach(p=>{
+      const isH=hl>=0&&p.nation===hl;
+      hp(ctx,p.cx,p.cy,R);
+      ctx.fillStyle=isH?bright(NATIONS[hl].color,1.8):(hl>=0?dark(NATIONS[p.nation]?.color||'#1a1a2a'):NATIONS[p.nation]?.color||'#1a1a2a');
+      ctx.fill();ctx.strokeStyle=isH?'rgba(201,168,76,.5)':'rgba(0,0,0,.36)';ctx.lineWidth=isH?.75:.3;ctx.stroke();
+    });
+    ctx.restore();
+    const vg=ctx.createRadialGradient(cw/2,ch/2,ch*.1,cw/2,ch/2,ch*.75);
+    vg.addColorStop(0,'rgba(6,8,14,0)');vg.addColorStop(1,'rgba(6,8,14,.72)');
+    ctx.fillStyle=vg;ctx.fillRect(0,0,cw,ch);
+  }
+
+  // ── ERA ──────────────────────────────────────────────────
+  const ERAS=[
+    {year:1936,sub:'Age of Ideologies',locked:false},
+    {year:1939,sub:'World at War',locked:true},
+    {year:1942,sub:'Turning Point',locked:true},
+  ];
+  let eraIdx=0;
+
+  function buildEra(){
+    const track=document.getElementById('era-track');if(!track)return;
+    track.innerHTML='';
+    ERAS.forEach((e,i)=>{
+      const d=document.createElement('div');
+      d.className='era-slide'+(e.locked?' locked':'');
+      d.id='era-s'+i;
+      d.innerHTML=e.locked
+        ?`<div class="era-lock">🔒</div><div class="era-year">${e.year}</div><div class="era-sub">${e.sub}</div>`
+        :`<div class="era-year">${e.year}</div><div class="era-sub">${e.sub}</div>`;
+      track.appendChild(d);
+    });
+    posEra(false);
+  }
+
+  function posEra(anim){
+    const track=document.getElementById('era-track');if(!track)return;
+    // slide so active is in center (slot 1 of 3 visible)
+    const pct=(-eraIdx+1)*33.3333;
+    track.style.transition=anim?'transform .3s cubic-bezier(.4,0,.2,1)':'none';
+    track.style.transform=`translateX(${pct}%)`;
+    ERAS.forEach((_,i)=>{
+      const sl=document.getElementById('era-s'+i);if(!sl)return;
+      const d=i-eraIdx;
+      sl.classList.remove('active','side','hidden');
+      if(d===0)sl.classList.add('active');
+      else if(Math.abs(d)===1)sl.classList.add('side');
+      else sl.classList.add('hidden');
+    });
+    const prev=document.getElementById('era-prev'),next=document.getElementById('era-next');
+    if(prev)prev.style.opacity=eraIdx===0?'.2':'1';
+    if(next)next.style.opacity=eraIdx===ERAS.length-1?'.2':'1';
+  }
+
+  function shake(id){
+    const b=document.getElementById(id);if(!b)return;
+    b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');
+    setTimeout(()=>b.classList.remove('shake'),400);
+  }
+
+  window.eraStep=function(dir){
+    const n=eraIdx+dir;
+    if(n<0){shake('era-prev');return;}
+    if(n>=ERAS.length){shake('era-next');return;}
+    eraIdx=n;posEra(true);
+  };
+
+  // drag/swipe
+  function initDrag(){
+    const outer=document.getElementById('era-track-outer');if(!outer)return;
+    let sx=null,dragging=false;
+    outer.addEventListener('mousedown',e=>{sx=e.clientX;dragging=true;e.preventDefault();});
+    window.addEventListener('mouseup',e=>{if(dragging){const dx=sx-e.clientX;dragging=false;if(Math.abs(dx)>22)eraStep(dx>0?1:-1);}});
+    outer.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
+    outer.addEventListener('touchend',e=>{if(sx!==null){const dx=sx-e.changedTouches[0].clientX;if(Math.abs(dx)>22)eraStep(dx>0?1:-1);sx=null;}},{passive:true});
+  }
+
+  // ── TITLE ────────────────────────────────────────────────
+  function initTitle(){
+    const wrap=document.getElementById('camp-title-wrap'),disp=document.getElementById('camp-title-display'),inp=document.getElementById('camp-title-input');
+    if(!wrap||!disp||!inp)return;
+    const edit=()=>{disp.style.display='none';inp.style.display='block';inp.value=disp.textContent;inp.focus();inp.select();};
+    const done=()=>{disp.textContent=(inp.value.trim()||'NEW CAMPAIGN').toUpperCase();inp.style.display='none';disp.style.display='';};
+    wrap.onclick=e=>{if(e.target!==inp)edit();};
+    inp.onblur=done;
+    inp.onkeydown=e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=disp.textContent;inp.blur();}};
+    inp.onclick=e=>e.stopPropagation();
+  }
+
+  // ── NATIONS ──────────────────────────────────────────────
+  function buildNations(){
+    const list=document.getElementById('nation-list');if(!list)return;
+    list.innerHTML='';
+    NATIONS.forEach((nat,i)=>{
+      const ideo=IDEOLOGIES[nat.ideology];
+      const row=document.createElement('div');
+      row.className='nat-row';
+      row.innerHTML=`<div class="nat-swatch" style="background:${nat.color}"></div><div class="nat-name">${nat.name}</div><div class="nat-ideo" style="color:${ideo?.color||'#888'};border-color:${ideo?.color||'#444'}">${ideo?.icon||''} ${nat.ideology}</div>`;
+      row.onmouseenter=()=>{hilite=i;drawMap(i);const l=document.getElementById('setup-map-label');if(l){l.textContent=nat.name;l.classList.add('vis');}};
+      row.onmouseleave=()=>{if(SC!==i){hilite=SC;drawMap(SC);const l=document.getElementById('setup-map-label');if(SC<0&&l)l.classList.remove('vis');}};
+      row.onclick=()=>{
+        if(SC===i){SC=-1;SI='fascism';row.classList.remove('pick');hilite=-1;drawMap(-1);const c=document.getElementById('nation-info-card');if(c)c.style.display='none';const l=document.getElementById('setup-map-label');if(l)l.classList.remove('vis');chkSB();return;}
+        document.querySelectorAll('.nat-row').forEach(x=>x.classList.remove('pick'));
+        row.classList.add('pick');SC=i;SI=nat.ideology;hilite=i;drawMap(i);showCard(i);chkSB();
+        const l=document.getElementById('setup-map-label');if(l){l.textContent=nat.name;l.classList.add('vis');}
+      };
+      list.appendChild(row);
+    });
+  }
+
+  function showCard(i){
+    const nat=NATIONS[i],ideo=IDEOLOGIES[nat.ideology],card=document.getElementById('nation-info-card');
+    if(!card)return;card.style.display='flex';
+    document.getElementById('nic-flag').style.background=nat.color;
+    document.getElementById('nic-name').textContent=nat.name;
+    document.getElementById('nic-ideo').innerHTML=`${ideo?.icon||''} ${ideo?.name||nat.ideology}`;
+    document.getElementById('nic-ideo').style.color=ideo?.color||'#888';
+    const pc=PROVINCES.filter(p=>p.nation===i).length;
+    const isD=['fascism','nazism','communism','stalinism','militarism'].includes(nat.ideology);
+    document.getElementById('nic-stats').innerHTML=`
+      <div class="nic-stat"><div class="nic-sl">Regions</div><div class="nic-sv">${pc}</div></div>
+      <div class="nic-stat"><div class="nic-sl">Attack</div><div class="nic-sv">${Math.round((ideo?.atk||1)*100)}%</div></div>
+      <div class="nic-stat"><div class="nic-sl">Defense</div><div class="nic-sv">${Math.round((ideo?.def||1)*100)}%</div></div>
+      <div class="nic-stat"><div class="nic-sl">Income</div><div class="nic-sv">${Math.round((ideo?.income||1)*100)}%</div></div>
+      <div class="nic-stat"><div class="nic-sl">Pop Grow</div><div class="nic-sv">${Math.round((ideo?.popGrowth||1)*100)}%</div></div>
+      <div class="nic-stat"><div class="nic-sl">Regime</div><div class="nic-sv" style="font-size:clamp(7px,.8vw,9px);color:${isD?'#ff8844':'#80c070'}">${isD?'Dictat.':'Demo.'}</div></div>`;
+    const tr=[];
+    (ideo?.buffs||[]).forEach(b=>tr.push(`<span class="nic-trait" style="color:#5fce4f;border-color:#1a6a1a">${b}</span>`));
+    (ideo?.debuffs||[]).forEach(d=>tr.push(`<span class="nic-trait" style="color:#ce5048;border-color:#6a1a1a">${d}</span>`));
+    document.getElementById('nic-traits').innerHTML=tr.join('');
+  }
+
+  // ── WIRING ───────────────────────────────────────────────
+  window.initNewCampaign=function(){
+    SC=-1;SI='fascism';
+    const d=document.getElementById('camp-title-display');if(d)d.textContent='NEW CAMPAIGN';
+    const inp=document.getElementById('camp-title-input');if(inp)inp.value='NEW CAMPAIGN';
+    eraIdx=0;
+  };
+  window.selectYear=function(){};
+
+  const origShow=window.show;
+  window.show=function(id){
+    origShow(id);
+    if(id==='setup'){
+      setTimeout(()=>{
+        rsz();buildNations();hilite=-1;drawMap(-1);
+        document.getElementById('nation-info-card').style.display='none';
+        buildEra();initDrag();initTitle();
+      },30);
+    }
+    if(id==='worlds')refreshWorldsList();
+    if(id==='mp')initMpScreen();
+  };
+  window.addEventListener('resize',()=>{if(document.getElementById('s-setup')?.classList.contains('on'))rsz();});
+})();
+
+// ════════════════════════════════════════════════════════════
+//  MULTIPLAYER LOBBY INIT
+// ════════════════════════════════════════════════════════════
+
+// MP map background (same panning animation)
+(function(){
+  const cv=document.getElementById('mp-map-bg');if(!cv)return;
+  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:.18;pointer-events:none';
+  const cx=cv.getContext('2d'),nc=NATIONS.map(n=>n.color),R=8/Math.sqrt(3)*1.14,W=560,H=500;
+  let px=0,pd=1,raf;
+  function rsz(){cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;}
+  function hp(x,y,r){cx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+Math.PI/3*i;i?cx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a)):cx.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));}cx.closePath();}
+  function draw(){
+    const cw=cv.width,ch=cv.height;cx.clearRect(0,0,cw,ch);
+    const sc=Math.max(ch/H*1.06,cw/W*1.06),sw=W*sc,mp=Math.max(0,sw-cw);
+    px+=.12*pd;if(px>=mp){px=mp;pd=-1;}if(px<=0){px=0;pd=1;}
+    const ox=(cw-sw)/2-(mp>0?px:0),oy=(ch-H*sc)/2;
+    cx.save();cx.translate(ox,oy);cx.scale(sc,sc);
+    cx.fillStyle='#0a0f1a';cx.fillRect(-10,-10,W+20,H+20);
+    PROVINCES.forEach(p=>{hp(p.cx,p.cy,R);cx.fillStyle=nc[p.nation]||'#1a1a2a';cx.fill();cx.strokeStyle='rgba(0,0,0,.35)';cx.lineWidth=.28;cx.stroke();});
+    cx.restore();
+    const vg=cx.createRadialGradient(cw/2,ch/2,ch*.1,cw/2,ch/2,ch*.92);
+    vg.addColorStop(0,'rgba(6,8,14,.6)');vg.addColorStop(1,'rgba(6,8,14,.95)');
+    cx.fillStyle=vg;cx.fillRect(0,0,cw,ch);
+    raf=requestAnimationFrame(draw);
+  }
+  function start(){rsz();if(raf)cancelAnimationFrame(raf);draw();}
+  new MutationObserver(()=>{
+    document.getElementById('s-mp')?.classList.contains('on')?start():(raf&&(cancelAnimationFrame(raf),raf=null));
+  }).observe(document.getElementById('s-mp'),{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',()=>{if(raf)rsz();});
+})();
+
+let _mpHostNation = -1;
+
+function initMpScreen() {
+  // Build host nation picker
+  const list = document.getElementById('mp-host-nation-list');
+  if (!list || list.children.length > 0) return; // already built
+  NATIONS.forEach((nat,i) => {
+    const ideo = IDEOLOGIES[nat.ideology];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:9px;padding:6px 10px;background:rgba(0,0,0,.2);border:1px solid var(--border);cursor:pointer;margin-bottom:3px;transition:all .12s';
+    row.innerHTML = `
+      <div style="width:14px;height:14px;border-radius:2px;background:${nat.color};flex-shrink:0;border:1px solid rgba(255,255,255,.1)"></div>
+      <span style="font-family:Cinzel,serif;font-size:10px;flex:1;color:var(--text)">${nat.name}</span>
+      <span style="font-size:8px;color:${ideo?.color||'#888'}">${ideo?.icon||''} ${nat.ideology}</span>
+    `;
+    row.onmouseenter = () => { if(_mpHostNation!==i) row.style.borderColor='var(--border2)'; };
+    row.onmouseleave = () => { if(_mpHostNation!==i) row.style.borderColor='var(--border)'; };
+    row.onclick = () => {
+      _mpHostNation = i;
+      list.querySelectorAll('div').forEach(r => { r.style.borderColor='var(--border)'; r.style.background='rgba(0,0,0,.2)'; });
+      row.style.borderColor = 'var(--gold)';
+      row.style.background = 'rgba(201,168,76,.07)';
+      document.getElementById('mp-create-btn')?.removeAttribute('disabled');
+    };
+    list.appendChild(row);
+  });
+}
+
+function mpCreateRoom() {
+  if (_mpHostNation < 0) { popup('Pick your nation first!'); return; }
+  document.getElementById('mp-create-btn').disabled = true;
+  document.getElementById('mp-room-display').style.display = 'flex';
+  MP.createRoom(_mpHostNation);
+
+  // When guest joins and picks nation, show them
+  const orig = MP.pickGuestNation?.bind(MP);
+  // Watch for guest nation set
+  const checkGuest = setInterval(() => {
+    if (MP.guestNation >= 0) {
+      clearInterval(checkGuest);
+      const gj = document.getElementById('mp-guest-joined');
+      const wt = document.getElementById('mp-waiting-text');
+      if (gj) gj.style.display = 'block';
+      if (wt) wt.style.display = 'none';
+      document.getElementById('mp-chat-area').style.display = 'flex';
+    }
+  }, 500);
+}
+
+function mpJoinRoom() {
+  const id = document.getElementById('mp-join-id')?.value?.trim();
+  if (!id) { popup('Enter a room code!'); return; }
+  document.getElementById('mp-join-btn').disabled = true;
+  document.getElementById('mp-chat-area').style.display = 'flex';
+  MP.joinRoom(id, -1); // nation picked via UI
+}
+
+function mpCopyId() {
+  const id = document.getElementById('mp-room-id')?.textContent;
+  if (!id || id === '—') return;
+  navigator.clipboard?.writeText(id).then(() => popup('✓ Room code copied!', 1800))
+    .catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = id; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      popup('✓ Copied!', 1800);
+    });
+}
 </script>
 </body>
 </html>
