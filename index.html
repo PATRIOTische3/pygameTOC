@@ -372,7 +372,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
     <div class="i-title">Time of Conquest</div>
     <div class="i-rule"></div>
     <button class="btn" onclick="show('worlds');refreshWorldsList()" style="margin-top:12px">▶ Single Player</button>
-    <button class="btn" onclick="show('mp')" style="border-color:#4080c0;color:#80b8f0">⚡ Multiplayer</button>
+    <button class="btn" onclick="show('mp')" style="border-color:#4080c0;color:#80b8f0">⚡ Local</button>
   </div>
 </div>
 
@@ -383,7 +383,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 
     <!-- Header -->
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div class="mp-title">⚡ Multiplayer</div>
+      <div class="mp-title">⚡ Local</div>
       <button class="worlds-back" onclick="try{MP.disconnect();}catch(e){}show('intro')">← Back</button>
     </div>
     <div class="mp-rule"></div>
@@ -685,19 +685,24 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 </div>
 
 <!-- BATTLE -->
-<div class="scr" id="s-battle">
-  <div class="btitle">⚔ Battle Report ⚔</div>
-  <div class="bfield">
-    <div class="bside batk"><div class="bst">Attacking</div><div class="bsn" id="b-an">—</div><div class="bsa" id="b-aa">0</div></div>
-    <div class="bvs">VS</div>
-    <div class="bside bdef"><div class="bst">Defending</div><div class="bsn" id="b-dn">—</div><div class="bsa" id="b-da">0</div></div>
+<div class="scr" id="s-battle" style="position:relative;overflow:hidden;background:#06080e">
+  <!-- Map canvas background - zoomed to battle province -->
+  <canvas id="battle-map-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <!-- Semi-transparent overlay panel -->
+  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,1.2vh,16px);padding:clamp(12px,2vh,24px);width:100%;height:100%;background:rgba(6,8,14,.72)">
+    <div class="btitle">⚔ Battle Report ⚔</div>
+    <div class="bfield">
+      <div class="bside batk"><div class="bst">Attacking</div><div class="bsn" id="b-an">—</div><div class="bsa" id="b-aa">0</div></div>
+      <div class="bvs">VS</div>
+      <div class="bside bdef"><div class="bst">Defending</div><div class="bsn" id="b-dn">—</div><div class="bsa" id="b-da">0</div></div>
+    </div>
+    <div class="bbars">
+      <div class="bbw"><div class="bbl"><span>Attack power</span><span id="b-ap">—</span></div><div class="bb"><div class="bbf ba" id="b-ab" style="width:0%"></div></div></div>
+      <div class="bbw"><div class="bbl"><span>Defense power</span><span id="b-dp">—</span></div><div class="bb"><div class="bbf bd" id="b-db" style="width:0%"></div></div></div>
+    </div>
+    <div class="bbonus" id="b-bonus"></div>
+    <div class="bres" id="bres"></div>
   </div>
-  <div class="bbars">
-    <div class="bbw"><div class="bbl"><span>Attack power</span><span id="b-ap">—</span></div><div class="bb"><div class="bbf ba" id="b-ab" style="width:0%"></div></div></div>
-    <div class="bbw"><div class="bbl"><span>Defense power</span><span id="b-dp">—</span></div><div class="bb"><div class="bbf bd" id="b-db" style="width:0%"></div></div></div>
-  </div>
-  <div class="bbonus" id="b-bonus"></div>
-  <div class="bres" id="bres"></div>
 </div>
 
 <!-- VICTORY / DEFEAT -->

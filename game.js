@@ -371,6 +371,8 @@ function drawMap(){
       hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=2/vp.scale;ctx.stroke();
     } else if(G.moveMode&&G.moveFrom>=0&&isMoveTgt(i)){
       hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,255,80,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
+    } else if(_atkSelectMode&&isAtkSrc(i)){
+      hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,80,80,.9)';ctx.lineWidth=1.8/vp.scale;ctx.stroke();
     } else if(G.navalMode&&G.navalFrom>=0&&navalDests(G.navalFrom).includes(i)){
       hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,200,255,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
     } else {
@@ -634,6 +636,18 @@ function onCanvasClick(wx,wy){
     if(isMoveTgt(i))openMoveDialog(G.moveFrom,i);
     else if(G.owner[i]===G.playerNation&&G.army[i]>100){G.moveFrom=i;scheduleDraw();updateSP(i);}
     else cancelMove();
+    return;
+  }
+
+  // Attack source selection mode
+  if(_atkSelectMode && _atkTarget>=0){
+    if(isAtkSrc(i)){
+      const tgt=_atkTarget;
+      cancelAtkSelect();
+      showAttackDialog(i, tgt);
+    } else {
+      cancelAtkSelect();
+    }
     return;
   }
 
@@ -929,6 +943,7 @@ function setEB(d){['end-btn','end-btn-mob'].forEach(id=>{const b=document.getEle
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape'){
     hideProvPopup();
+    if(_atkSelectMode) cancelAtkSelect();
     if(G.moveMode) cancelMove();
     if(G.navalMode) cancelNaval();
   }
@@ -940,7 +955,7 @@ function toggleMoveMode(){
   if(G.navalMode)cancelNaval();
   if(G.moveMode){cancelMove();return;}
   const si=G.sel;
-  if(si<0||G.owner[si]!==G.playerNation||G.army[si]<=100){popup('Select your territory first!');return;}
+  if(si<0||G.owner[si]!==G.playerNation||G.army[si]<1){popup('Select your territory first!');return;}
   G.moveFrom=si;G.moveMode=true;
   const mb=document.getElementById('move-banner');if(mb)mb.style.display='block';
   ['sp-btn-move','mob-btn-move'].forEach(id=>{const b=document.getElementById(id);if(b){b.classList.add('active-mode');const am=b.querySelector('.am');if(am)am.textContent='Cancel Move';}});
@@ -952,27 +967,62 @@ function cancelMove(){
   ['sp-btn-move','mob-btn-move'].forEach(id=>{const b=document.getElementById(id);if(b){b.classList.remove('active-mode');const am=b.querySelector('.am');if(am)am.textContent='Move Army';}});
   scheduleDraw();
 }
+function isMoveTgt(i){
+  if(!G.moveMode||G.moveFrom<0||i===G.moveFrom)return false;
+  if(!NB[G.moveFrom]?.includes(i))return false;
+  return true; // can target enemy too — will ask about attacking
+}
 function openMoveDialog(from,to){
   cancelMove();
-  if(G.owner[to]>=0&&G.owner[to]!==G.playerNation&&!atWar(G.playerNation,G.owner[to])){popup('Cannot enter without war!');return;}
-  const max=G.army[from]-100;
+  const toOwner=G.owner[to];
+  const PN=G.playerNation;
+
+  // Moving onto ENEMY territory → offer attack instead
+  if(toOwner>=0&&toOwner!==PN&&!atWar(PN,toOwner)){
+    if(inPeacePeriod()){popup(`Peace period — ${peaceTurnsLeft()} weeks remaining`);return;}
+    openMo('ENTER HOSTILE TERRITORY',
+      `<p class="mx">Moving into <b style="color:#ff7070">${PROVINCES[to].name}</b> (${ownerName(toOwner)}) will start a war.</p>
+       <p class="mx" style="color:var(--dim)">Declare war and attack, or cancel?</p>`,
+      [{lbl:'Cancel',cls:'dim'},
+       {lbl:'⚔ Declare War & Attack',cls:'red',cb:()=>{G.sel=to;window._af=from;window._at=to;launchAtkFromMove(from,to);}}]
+    );
+    return;
+  }
+
+  // Moving onto province already at war / independent / own
+  const max=G.army[from]; // ALL troops can move now (no forced 100 reserve)
   const s=season();
   const terrMod=s.winterTerrain?.includes(PROVINCES[to].terrain)?s.moveMod:1.0;
   const movNote=terrMod<1?`<p class="mx" style="color:#80c8ff">${s.icon} ${s.name}: movement ×${terrMod} in ${TERRAIN[PROVINCES[to].terrain]?.name}</p>`:'';
-  openMo('TROOP MOVEMENT',`<p class="mx"><b>${PROVINCES[from].name}</b> → <b style="color:var(--gold)">${PROVINCES[to].name}</b></p>${movNote}<p class="mx">Available: <b>${fa(max)}</b> soldiers</p><div class="slider-w"><div class="slider-l"><span>Soldiers</span><span class="slider-v" id="msv">${fa(max)}</span></div><input type="range" id="msl" min="100" max="${max}" value="${max}" oninput="updSl('msl','msv')"></div>`,
-    [{lbl:'Cancel',cls:'dim'},{lbl:'Move!',cls:'grn',cb:()=>confirmMove(from,to)}]);
+  openMo('TROOP MOVEMENT',
+    `<p class="mx"><b>${PROVINCES[from].name}</b> → <b style="color:var(--gold)">${PROVINCES[to].name}</b></p>
+     ${movNote}
+     <p class="mx">Available: <b>${fa(max)}</b> soldiers</p>
+     <div class="slider-w"><div class="slider-l"><span>Soldiers</span><span class="slider-v" id="msv">${fa(max)}</span></div>
+     <input type="range" id="msl" min="1" max="${max}" value="${max}" oninput="updSl('msl','msv')"></div>`,
+    [{lbl:'Cancel',cls:'dim'},{lbl:'Move!',cls:'grn',cb:()=>confirmMove(from,to)}]
+  );
   setTimeout(()=>document.getElementById('msl')?.style.setProperty('--pct','100%'),40);
 }
 function confirmMove(from,to){
-  const v=+(document.getElementById('msl')?.value||G.army[from]-100);if(!v)return;
+  const v=+(document.getElementById('msl')?.value||G.army[from]);if(!v)return;
   const s=season();
   const terrMod=s.winterTerrain?.includes(PROVINCES[to].terrain)?s.moveMod:1.0;
   const actual=Math.round(v*terrMod);
-  G.army[from]-=v;G.army[to]+=actual;
+  G.army[from]=Math.max(0,G.army[from]-v); // no forced reserve — can move all
+  G.army[to]+=actual;
   if(actual<v)addLog(`${s.icon} Winter: ${fa(v-actual)} soldiers lost to cold!`,'season');
-  if(G.owner[to]<0)G.owner[to]=G.playerNation;
+  if(G.owner[to]<0)G.owner[to]=G.playerNation; // claim independent
   scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);
   addLog(`${PROVINCES[from].short}: ${fa(actual)} soldiers → ${PROVINCES[to].short}.`,'move');
+}
+function launchAtkFromMove(from,to){
+  // Trigger full attack from move — max force
+  const en=G.owner[to],PN=G.playerNation;
+  if(en>=0)G.war[PN][en]=G.war[en][PN]=true;
+  window._af=from;window._at=to;
+  addLog(`⚔ Attack on ${PROVINCES[to].name}!`,'war');
+  runBattle(from,to,G.army[from],PN,()=>{scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);chkBtns();chkVic();show('game');});
 }
 function updSl(slId,vId){
   const sl=document.getElementById(slId),vEl=document.getElementById(vId);
@@ -1357,28 +1407,69 @@ function processResistance(){
 
 
 // ── ATTACK / BATTLE ───────────────────────────────────────
+// ── ATTACK SOURCE SELECTION ───────────────────────────────
+// When player clicks Attack, if multiple border provinces → highlight them for selection
+let _atkSelectMode = false;
+let _atkTarget = -1;
+
+function cancelAtkSelect(){
+  _atkSelectMode = false;
+  _atkTarget = -1;
+  const mb=document.getElementById('move-banner');
+  if(mb){mb.style.display='none';mb.className='';}
+  scheduleDraw();
+}
+
+// Highlight attack sources on map (reuse move highlight color but red)
+function isAtkSrc(i){
+  return _atkSelectMode && _atkTarget>=0 && G.owner[i]===G.playerNation && G.army[i]>100 && NB[i]?.includes(_atkTarget);
+}
+
 function openAttack(){
   if(inPeacePeriod()){popup(`Peace period — ${peaceTurnsLeft()} weeks remaining`);return;}
   const si=G.sel;
   if(si<0||G.owner[si]===G.playerNation){popup('Select an enemy territory!');return;}
-  const PN=G.playerNation,fr=regsOf(PN).find(r=>G.army[r]>100&&NB[r]?.includes(si));
-  if(fr===undefined){popup('No army on the border!');return;}
-  window._af=fr;window._at=si;
-  const en=G.owner[si],hasPact=en>=0&&G.pact[PN][en],hasAlly=en>=0&&areAllies(PN,en);
-  const hasFort=(G.buildings[si]||[]).includes('fortress');
-  const io=ideol(),terrain=TERRAIN[PROVINCES[si].terrain||'plains'];
-  const defBonus=terrain.defB*(hasFort?1.6:1),effDef=Math.round(G.army[si]*defBonus);
-  const resist=G.resistance[si];
+  const PN=G.playerNation;
+  const sources=regsOf(PN).filter(r=>G.army[r]>100&&NB[r]?.includes(si));
+  if(!sources.length){popup('No army on the border!');return;}
+
+  if(sources.length===1){
+    // Only one border province — go straight to attack dialog
+    window._af=sources[0];window._at=si;
+    showAttackDialog(sources[0],si);
+  } else {
+    // Multiple border provinces → switch to selection mode
+    _atkSelectMode=true;
+    _atkTarget=si;
+    hideProvPopup();
+    const mb=document.getElementById('move-banner');
+    if(mb){mb.style.display='block';mb.className='';mb.style.cssText='display:block;background:rgba(80,10,10,.88);border-color:rgba(255,80,80,.5);color:#ff8080;'+mb.style.cssText.replace(/display:[^;]+;/,'');}
+    if(mb)mb.textContent=`⚔ Choose attack province (${sources.length} available) — Esc to cancel`;
+    scheduleDraw();
+    popup(`${sources.length} border provinces — click one to attack from`);
+  }
+}
+
+function showAttackDialog(fr,to){
+  window._af=fr;window._at=to;
+  const en=G.owner[to],PN=G.playerNation;
+  const hasPact=en>=0&&G.pact[PN][en],hasAlly=en>=0&&areAllies(PN,en);
+  const hasFort=(G.buildings[to]||[]).includes('fortress');
+  const io=ideol(),terrain=TERRAIN[PROVINCES[to].terrain||'plains'];
+  const defBonus=terrain.defB*(hasFort?1.6:1),effDef=Math.round(G.army[to]*defBonus);
+  const resist=G.resistance[to];
   let html='';
   if(hasPact)html+=`<p class="mx" style="color:#e07030">⚠ This will break your non-aggression pact!</p>`;
   if(hasAlly)html+=`<p class="mx" style="color:#ff6040">⚠ ${NATIONS[en]?.short} is your ALLY! Alliance will be broken!</p>`;
   if(hasFort)html+=`<p class="mx" style="color:#c09040">🏰 Fortress: defense ×1.6</p>`;
-  if(resist>20)html+=`<p class="mx" style="color:#ff9040">🔥 Active resistance +${Math.round(resist/5)}% attack bonus for you!</p>`;
+  if(resist>20)html+=`<p class="mx" style="color:#ff9040">🔥 Resistance: +${Math.round(resist/5)}% attack bonus</p>`;
   html+=`<p class="mx">${io.icon} ${io.name}: atk ×${io.atk.toFixed(2)} · ${terrain.name} def ×${terrain.defB.toFixed(1)}</p>`;
-  html+=`<p class="mx"><b>${PROVINCES[fr].short}</b> → <b style="color:#ff7070">${PROVINCES[si].name}</b></p>`;
+  html+=`<p class="mx"><b>${PROVINCES[fr].short}</b> → <b style="color:#ff7070">${PROVINCES[to].name}</b></p>`;
   html+=`<p class="mx">Your force: <b>${fa(G.army[fr])}</b> · Enemy effective: <b style="color:#ff7070">${fa(effDef)}</b></p>`;
   html+=`<div class="slider-w"><div class="slider-l"><span>Force to commit</span><span class="slider-v" id="asv">${fa(G.army[fr])}</span></div><input type="range" id="asl" min="100" max="${G.army[fr]}" value="${G.army[fr]}" oninput="updSl('asl','asv')"></div>`;
-  const btns=hasPact||hasAlly?[{lbl:'Cancel',cls:'dim'},{lbl:'Break & Attack',cls:'red',cb:()=>launchAtk(true)}]:[{lbl:'Cancel',cls:'dim'},{lbl:'⚔ Attack!',cls:'red',cb:()=>launchAtk(false)}];
+  const btns=hasPact||hasAlly
+    ?[{lbl:'Cancel',cls:'dim'},{lbl:'Break & Attack',cls:'red',cb:()=>launchAtk(true)}]
+    :[{lbl:'Cancel',cls:'dim'},{lbl:'⚔ Attack!',cls:'red',cb:()=>launchAtk(false)}];
   openMo('DECLARE WAR',html,btns);
   setTimeout(()=>document.getElementById('asl')?.style.setProperty('--pct','100%'),40);
 }
@@ -1417,16 +1508,21 @@ function runBattle(fr,to,atkF,atker,done){
   const instPen=isP?Math.max(.7,1-G.instab[fr]/150):1.0;
   const capPen=G.capitalPenalty[atker]>0?.85:1.0;
   const hasArsenal=(G.buildings[fr]||[]).includes('arsenal');
-  const resistBonus=isP?1+(G.resistance[to]/200):1.0; // resistance helps attacker
+  const resistBonus=isP?1+(G.resistance[to]/200):1.0;
   const effAtk=atkF*io2.atk*instPen*capPen*(hasArsenal?1.2:1)*resistBonus;
   const effDef=Math.round(df*defM);
   const ap=effAtk/(effAtk+effDef)*100;
 
   if(isP){
+    // Switch to political mode for battle screen
+    const prevMode=G.mapMode;
+    G.mapMode='political';
+
     sEl('b-an',PROVINCES[fr].short);
     sEl('b-dn',PROVINCES[to].name+(PROVINCES[to].isCapital?' ★':''));
     sEl('b-aa',fa(atkF));sEl('b-da',fa(effDef)+(hasFort?' 🏰':''));
-    document.getElementById('b-ab').style.width='0%';document.getElementById('b-db').style.width='0%';
+    document.getElementById('b-ab').style.width='0%';
+    document.getElementById('b-db').style.width='0%';
     sEl('b-ap',Math.round(ap)+'%');sEl('b-dp',Math.round(100-ap)+'%');
     const bon=[];
     if(io2.atk!==1)bon.push(`${io2.name} ×${io2.atk.toFixed(2)}`);
@@ -1437,8 +1533,13 @@ function runBattle(fr,to,atkF,atker,done){
     sEl('b-bonus',bon.join(' | '));
     document.getElementById('bres').className='bres';
     show('battle');
+    drawBattleMap(fr, to);
+    G.mapMode=prevMode;
   }
-  if(isP)setTimeout(()=>{document.getElementById('b-ab').style.width=ap+'%';document.getElementById('b-db').style.width=(100-ap)+'%';},100);
+  if(isP)setTimeout(()=>{
+    document.getElementById('b-ab').style.width=ap+'%';
+    document.getElementById('b-db').style.width=(100-ap)+'%';
+  },100);
 
   setTimeout(()=>{
     const av=effAtk*rf(.78,1.25),dv=effDef*rf(.78,1.25),win=av>dv;
@@ -1464,8 +1565,80 @@ function runBattle(fr,to,atkF,atker,done){
   },isP?2000:0);
 }
 
+function drawBattleMap(fr, to){
+  const bcanvas=document.getElementById('battle-map-canvas');
+  if(!bcanvas)return;
+  bcanvas.width=bcanvas.offsetWidth||window.innerWidth;
+  bcanvas.height=bcanvas.offsetHeight||window.innerHeight;
+  const bctx=bcanvas.getContext('2d');
+  const bW=bcanvas.width, bH=bcanvas.height;
 
-// ── DIPLOMACY: ALLIANCES, PACTS, PUPPETS, ULTIMATUM ───────
+  // Zoom viewport centered on battle province, at a high zoom level
+  const tp=PROVINCES[to];
+  const zoomScale=Math.max(bW,bH)/60; // zoom so ~60 world units fill the screen
+  const bvpTx=bW/2-tp.cx*zoomScale;
+  const bvpTy=bH/2-tp.cy*zoomScale;
+
+  // Ocean background
+  const grad=bctx.createLinearGradient(0,0,0,bH);
+  grad.addColorStop(0,'#08162a');grad.addColorStop(1,'#0c1e38');
+  bctx.fillStyle=grad;bctx.fillRect(0,0,bW,bH);
+
+  bctx.save();
+  bctx.translate(bvpTx,bvpTy);bctx.scale(zoomScale,zoomScale);
+
+  const r=HEX_R+0.6/zoomScale;
+
+  function hexP(cx,cy){
+    bctx.beginPath();
+    for(let k=0;k<6;k++){const a=Math.PI/6+Math.PI/3*k;k===0?bctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r):bctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}
+    bctx.closePath();
+  }
+
+  // Draw all provinces (full political colors)
+  PROVINCES.forEach((p,i)=>{
+    hexP(p.cx,p.cy);
+    bctx.fillStyle=provColor(i);
+    bctx.fill();
+    const o=G.owner[i];
+    const hasBorder=(NB[i]||[]).some(nb=>G.owner[nb]!==o);
+    if(hasBorder){
+      hexP(p.cx,p.cy);
+      bctx.strokeStyle=o<0&&!p.isSea?'rgba(200,40,40,.8)':'rgba(6,8,14,.6)';
+      bctx.lineWidth=.5/zoomScale;bctx.stroke();
+    }
+  });
+
+  // Highlight attacker (green) and defender (red) provinces
+  hexP(PROVINCES[fr].cx,PROVINCES[fr].cy);
+  bctx.strokeStyle='rgba(80,255,80,.95)';bctx.lineWidth=2/zoomScale;bctx.stroke();
+  hexP(tp.cx,tp.cy);
+  bctx.strokeStyle='rgba(255,80,80,.95)';bctx.lineWidth=2.5/zoomScale;bctx.stroke();
+
+  // Army labels on visible provinces
+  const fs=Math.max(3,Math.min(8,HEX_R*.5));
+  bctx.textAlign='center';bctx.textBaseline='middle';
+  PROVINCES.forEach((p,i)=>{
+    if(G.army[i]>0&&canSeeArmy(i)){
+      bctx.font=`${fs}px Cinzel,serif`;
+      bctx.fillStyle='rgba(232,205,145,.9)';
+      bctx.shadowColor='rgba(0,0,0,.9)';bctx.shadowBlur=2;
+      bctx.fillText(fm(G.army[i]),p.cx,p.cy);
+      bctx.shadowBlur=0;
+    }
+  });
+
+  bctx.restore();
+
+  // Arrow overlay from fr to to
+  const [fsx,fsy]=[PROVINCES[fr].cx*zoomScale+bvpTx, PROVINCES[fr].cy*zoomScale+bvpTy];
+  const [tsx,tsy]=[tp.cx*zoomScale+bvpTx, tp.cy*zoomScale+bvpTy];
+  bctx.save();
+  bctx.strokeStyle='rgba(255,200,80,.7)';bctx.lineWidth=3;
+  bctx.setLineDash([8,4]);
+  bctx.beginPath();bctx.moveTo(fsx,fsy);bctx.lineTo(tsx,tsy);bctx.stroke();
+  bctx.setLineDash([]);bctx.restore();
+}
 function openAllianceMenu(){
   const PN=G.playerNation,myAl=G.allianceOf[PN];
   const alive=aliveNations().slice(0,22);
