@@ -248,26 +248,35 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 .ideo-mo-card{padding:8px 10px;background:rgba(0,0,0,.28);border:1px solid var(--border);cursor:pointer;transition:all .11s;display:flex;align-items:center;gap:10px}
 .ideo-mo-card:hover{border-color:var(--border2)}
 .imp{color:#60cc50}.imm{color:#cc5048}
-#s-battle{align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:14px;background:radial-gradient(ellipse at center,#180a08,#030101)}
-.btitle{font-family:'Cinzel Decorative',serif;font-size:clamp(14px,4.5vw,24px);color:var(--gold);letter-spacing:3px;text-shadow:0 0 28px rgba(201,168,76,.4)}
-.bfield{display:flex;align-items:center;gap:20px;width:100%;max-width:420px}
-.bside{flex:1;text-align:center;padding:9px 5px;border:1px solid;position:relative;overflow:hidden}
-.batk{border-color:var(--gold)}.bdef{border-color:#d43030}
-.bst{font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
-.bsn{font-family:'Cinzel',serif;font-size:clamp(8px,2vw,11px);color:var(--text);margin-bottom:3px}
-.bsa{font-family:'Cinzel',serif;font-size:clamp(16px,5vw,26px);line-height:1}
-.batk .bsa{color:var(--gold2)}.bdef .bsa{color:#ff7070}
-.bvs{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,5.5vw,32px);color:#d43030;flex-shrink:0;animation:vsb .9s ease-in-out infinite alternate}
-@keyframes vsb{from{transform:scale(1)}to{transform:scale(1.1)}}
-.bbars{width:100%;max-width:420px;display:flex;flex-direction:column;gap:5px}
-.bbw{display:flex;flex-direction:column;gap:2px}
-.bbl{font-size:8px;color:var(--dim);text-transform:uppercase;display:flex;justify-content:space-between}
-.bb{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
-.bbf{height:100%;border-radius:3px;transition:width .7s}
-.ba{background:linear-gradient(90deg,var(--gold),var(--gold2))}.bd{background:linear-gradient(90deg,var(--red),#d43030)}
-.bres{font-family:'Cinzel',serif;font-size:clamp(11px,3vw,15px);text-align:center;letter-spacing:1.5px;padding:7px 14px;border:1px solid;opacity:0;transition:opacity .4s}
-.bres.win{color:#80ff80;border-color:#3a9c28;background:rgba(58,156,40,.08)}.bres.lose{color:#ff7070;border-color:#c03030;background:rgba(192,48,48,.08)}.bres.show{opacity:1}
-.bbonus{font-size:8.5px;color:var(--dim);text-align:center;margin-top:2px}
+#s-battle{align-items:center;justify-content:center;flex-direction:column;background:#06080e}
+#battle-vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 20%,rgba(4,6,10,.55) 70%,rgba(2,4,8,.88) 100%);z-index:1}
+#battle-card{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.2vh,16px);padding:clamp(14px,2vw,28px) clamp(16px,2.5vw,36px);background:linear-gradient(160deg,rgba(18,10,6,.93),rgba(6,3,2,.97));border:1px solid rgba(201,168,76,.3);box-shadow:0 0 80px rgba(0,0,0,.8),0 0 30px rgba(180,30,20,.12),inset 0 0 40px rgba(0,0,0,.3);min-width:clamp(280px,32vw,460px);max-width:520px}
+#battle-card::before{content:'';display:block;position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.5) 30%,rgba(201,168,76,.7) 50%,rgba(201,168,76,.5) 70%,transparent)}
+#battle-card::after{content:'';display:block;position:absolute;bottom:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.25) 50%,transparent)}
+.btitle{font-family:'Cinzel Decorative',serif;font-size:clamp(13px,1.5vw,20px);color:var(--gold);letter-spacing:4px;text-shadow:0 0 20px rgba(201,168,76,.5),0 0 40px rgba(201,168,76,.15)}
+.btitle-sub{font-family:'Cinzel',serif;font-size:clamp(7px,.65vw,9px);color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-top:-6px;opacity:.7}
+.bfield{display:flex;align-items:stretch;gap:0;width:100%}
+.bside{flex:1;text-align:center;padding:clamp(8px,1.2vh,16px) clamp(8px,1vw,16px);position:relative;overflow:hidden}
+.bside.batk{background:linear-gradient(135deg,rgba(30,70,20,.35),rgba(16,44,10,.18));border:1px solid rgba(70,150,50,.35);border-right:none;border-radius:2px 0 0 2px}
+.bside.bdef{background:linear-gradient(225deg,rgba(70,16,16,.35),rgba(44,8,8,.18));border:1px solid rgba(150,40,40,.35);border-left:none;border-radius:0 2px 2px 0}
+.bvs-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 clamp(6px,.8vw,14px);flex-shrink:0}
+.bst{font-family:'Cinzel',serif;font-size:clamp(6px,.6vw,8px);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:5px}
+.batk .bst{color:#80c860;opacity:.8}.bdef .bst{color:#c85050;opacity:.8}
+.bsn{font-family:'Cinzel',serif;font-size:clamp(9px,1vw,13px);color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bsa{font-family:'Cinzel',serif;font-size:clamp(20px,3vw,40px);font-weight:700;line-height:1.1}
+.batk .bsa{color:#a0e870;text-shadow:0 0 12px rgba(100,200,50,.3)}.bdef .bsa{color:#e87070;text-shadow:0 0 12px rgba(200,50,50,.3)}
+.bvs{font-family:'Cinzel Decorative',serif;font-size:clamp(16px,2.2vw,28px);color:#d43030;animation:vsb .9s ease-in-out infinite alternate;text-shadow:0 0 10px rgba(200,30,30,.4)}
+@keyframes vsb{from{transform:scale(1);opacity:.8}to{transform:scale(1.1);opacity:1}}
+.bbars{width:100%;display:flex;flex-direction:column;gap:clamp(4px,.6vh,8px)}
+.bbw{display:flex;flex-direction:column;gap:3px}
+.bbl{display:flex;justify-content:space-between;font-family:'Cinzel',serif;font-size:clamp(7px,.6vw,9px);letter-spacing:.5px}
+.bbl span:first-child{color:var(--dim)}.bbl span:last-child{color:var(--text);font-weight:bold}
+.bb{height:clamp(4px,.5vh,7px);background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+.bbf{height:100%;border-radius:4px;transition:width 1.3s cubic-bezier(.15,.85,.25,1);width:0%}
+.ba{background:linear-gradient(90deg,#3a7020,#70b830,#90d850)}.bd{background:linear-gradient(90deg,#7a1010,#c02828,#e04040)}
+.bbonus{font-size:clamp(7px,.65vw,9px);color:var(--dim);text-align:center;letter-spacing:.3px;min-height:14px;opacity:.8}
+.bres{font-family:'Cinzel',serif;font-size:clamp(11px,1.1vw,15px);text-align:center;letter-spacing:1.5px;padding:clamp(7px,.9vh,12px) clamp(12px,1.5vw,22px);border:1px solid;opacity:0;transition:opacity .5s ease,transform .4s ease;transform:translateY(6px);width:100%;box-sizing:border-box;border-radius:1px}
+.bres.win{color:#90ff80;border-color:rgba(60,160,40,.5);background:linear-gradient(135deg,rgba(40,100,20,.22),rgba(20,60,10,.12))}.bres.lose{color:#ff9080;border-color:rgba(160,40,40,.5);background:linear-gradient(135deg,rgba(100,20,20,.22),rgba(60,10,10,.12))}.bres.show{opacity:1;transform:translateY(0)}
 #s-victory,#s-defeat{align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:18px}
 #s-victory{background:radial-gradient(ellipse at center,#1a1406,#040402)}
 #s-defeat{background:radial-gradient(ellipse at center,#160304,#020101)}
@@ -686,20 +695,31 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 </div>
 
 <!-- BATTLE -->
-<div class="scr" id="s-battle" style="position:relative;overflow:hidden;background:#06080e">
-  <!-- Map canvas background - zoomed to battle province -->
+<div class="scr" id="s-battle" style="position:relative;overflow:hidden">
+  <!-- Animated map background -->
   <canvas id="battle-map-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
-  <!-- Semi-transparent overlay panel -->
-  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,1.2vh,16px);padding:clamp(12px,2vh,24px);width:100%;height:100%;background:rgba(6,8,14,.72)">
+  <!-- Vignette over edges -->
+  <div id="battle-vignette"></div>
+  <!-- Centered battle card -->
+  <div id="battle-card">
     <div class="btitle">⚔ Battle Report ⚔</div>
+    <div class="btitle-sub" id="b-subtitle">—</div>
     <div class="bfield">
-      <div class="bside batk"><div class="bst">Attacking</div><div class="bsn" id="b-an">—</div><div class="bsa" id="b-aa">0</div></div>
-      <div class="bvs">VS</div>
-      <div class="bside bdef"><div class="bst">Defending</div><div class="bsn" id="b-dn">—</div><div class="bsa" id="b-da">0</div></div>
+      <div class="bside batk">
+        <div class="bst">Attacking from</div>
+        <div class="bsn" id="b-an">—</div>
+        <div class="bsa" id="b-aa">0</div>
+      </div>
+      <div class="bvs-wrap"><div class="bvs">VS</div></div>
+      <div class="bside bdef">
+        <div class="bst">Defending</div>
+        <div class="bsn" id="b-dn">—</div>
+        <div class="bsa" id="b-da">0</div>
+      </div>
     </div>
     <div class="bbars">
-      <div class="bbw"><div class="bbl"><span>Attack power</span><span id="b-ap">—</span></div><div class="bb"><div class="bbf ba" id="b-ab" style="width:0%"></div></div></div>
-      <div class="bbw"><div class="bbl"><span>Defense power</span><span id="b-dp">—</span></div><div class="bb"><div class="bbf bd" id="b-db" style="width:0%"></div></div></div>
+      <div class="bbw"><div class="bbl"><span>⚔ Attack power</span><span id="b-ap">—</span></div><div class="bb"><div class="bbf ba" id="b-ab" style="width:0%"></div></div></div>
+      <div class="bbw"><div class="bbl"><span>🛡 Defense power</span><span id="b-dp">—</span></div><div class="bb"><div class="bbf bd" id="b-db" style="width:0%"></div></div></div>
     </div>
     <div class="bbonus" id="b-bonus"></div>
     <div class="bres" id="bres"></div>

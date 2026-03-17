@@ -1521,6 +1521,7 @@ function runBattle(fr,to,atkF,atker,done){
     sEl('b-an',PROVINCES[fr].short);
     sEl('b-dn',PROVINCES[to].name+(PROVINCES[to].isCapital?' ★':''));
     sEl('b-aa',fa(atkF));sEl('b-da',fa(effDef)+(hasFort?' 🏰':''));
+    sEl('b-subtitle',`${PROVINCES[fr].short} → ${PROVINCES[to].name}`);
     document.getElementById('b-ab').style.width='0%';
     document.getElementById('b-db').style.width='0%';
     sEl('b-ap',Math.round(ap)+'%');sEl('b-dp',Math.round(100-ap)+'%');
@@ -1561,83 +1562,153 @@ function runBattle(fr,to,atkF,atker,done){
       G.army[fr]=Math.max(0,G.army[fr]-al);G.army[to]=Math.max(200,df-dl);
       if(isP){document.getElementById('bres').className='bres lose show';document.getElementById('bres').textContent=`✗ Repelled! Lost ${fa(al)}.`;addLog(`✗ ${PROVINCES[to].name} held. Lost ${fa(al)}.`,'war');}
     }
-    setTimeout(done,isP?2200:0);
+    // Zoom out then call done
+    if(isP){
+      setTimeout(()=>battleZoomOut(done), 2000);
+    } else {
+      done();
+    }
   },isP?2000:0);
 }
 
 function drawBattleMap(fr, to){
   const bcanvas=document.getElementById('battle-map-canvas');
   if(!bcanvas)return;
-  bcanvas.width=bcanvas.offsetWidth||window.innerWidth;
-  bcanvas.height=bcanvas.offsetHeight||window.innerHeight;
-  const bctx=bcanvas.getContext('2d');
+
+  // Size canvas to screen
+  bcanvas.width=window.innerWidth;
+  bcanvas.height=window.innerHeight;
   const bW=bcanvas.width, bH=bcanvas.height;
+  const bctx=bcanvas.getContext('2d');
 
-  // Zoom viewport centered on battle province, at a high zoom level
   const tp=PROVINCES[to];
-  const zoomScale=Math.max(bW,bH)/60; // zoom so ~60 world units fill the screen
-  const bvpTx=bW/2-tp.cx*zoomScale;
-  const bvpTy=bH/2-tp.cy*zoomScale;
+  const fp=PROVINCES[fr];
 
-  // Ocean background
-  const grad=bctx.createLinearGradient(0,0,0,bH);
-  grad.addColorStop(0,'#08162a');grad.addColorStop(1,'#0c1e38');
-  bctx.fillStyle=grad;bctx.fillRect(0,0,bW,bH);
+  // Target: zoom so both provinces comfortably fill ~40% of smaller dimension
+  const midX=(tp.cx+fp.cx)/2, midY=(tp.cy+fp.cy)/2;
+  const dist=Math.sqrt((tp.cx-fp.cx)**2+(tp.cy-fp.cy)**2);
+  const targetScale=Math.min(bW,bH)/(Math.max(dist*3.5,HEX_R*14));
 
-  bctx.save();
-  bctx.translate(bvpTx,bvpTy);bctx.scale(zoomScale,zoomScale);
+  // Start from current game viewport
+  let curScale=vp.scale;
+  let curTx=vp.tx, curTy=vp.ty;
+  const targetTx=bW/2-midX*targetScale;
+  const targetTy=bH/2-midY*targetScale;
 
-  const r=HEX_R+0.6/zoomScale;
+  const ANIM_MS=900;
+  const start=performance.now();
 
-  function hexP(cx,cy){
-    bctx.beginPath();
-    for(let k=0;k<6;k++){const a=Math.PI/6+Math.PI/3*k;k===0?bctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r):bctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}
-    bctx.closePath();
+  function easeInOut(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+
+  function renderFrame(ts){
+    const raw=Math.min((ts-start)/ANIM_MS,1);
+    const t=easeInOut(raw);
+
+    const scale=curScale+(targetScale-curScale)*t;
+    const tx=curTx+(targetTx-curTx)*t;
+    const ty=curTy+(targetTy-curTy)*t;
+
+    // Ocean background
+    bctx.fillStyle='#08162a'; bctx.fillRect(0,0,bW,bH);
+
+    bctx.save();
+    bctx.translate(tx,ty); bctx.scale(scale,scale);
+
+    const r=HEX_R+0.5/scale;
+
+    function hexP2(cx,cy){
+      bctx.beginPath();
+      for(let k=0;k<6;k++){const a=Math.PI/6+Math.PI/3*k;k===0?bctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r):bctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}
+      bctx.closePath();
+    }
+
+    // Calculate visible world bounds for culling
+    const wx0=-tx/scale, wy0=-ty/scale;
+    const wx1=(bW-tx)/scale, wy1=(bH-ty)/scale;
+    const margin=HEX_R*3;
+
+    // Draw provinces
+    PROVINCES.forEach((p,i)=>{
+      if(p.cx<wx0-margin||p.cx>wx1+margin||p.cy<wy0-margin||p.cy>wy1+margin)return;
+      hexP2(p.cx,p.cy);
+      bctx.fillStyle=provColor(i);
+      bctx.fill();
+      const o=G.owner[i];
+      const hasBorder=(NB[i]||[]).some(nb=>G.owner[nb]!==o);
+      if(hasBorder){
+        hexP2(p.cx,p.cy);
+        bctx.strokeStyle=o<0&&!p.isSea?'rgba(200,40,40,.7)':'rgba(6,8,14,.55)';
+        bctx.lineWidth=.5/scale; bctx.stroke();
+      }
+    });
+
+    // Attacker province: green glow border
+    hexP2(fp.cx,fp.cy);
+    bctx.strokeStyle='rgba(80,220,60,.9)'; bctx.lineWidth=2.5/scale; bctx.stroke();
+
+    // Defender province: red glow border (pulsing via t offset)
+    hexP2(tp.cx,tp.cy);
+    const pulse=0.7+0.3*Math.sin(ts/200);
+    bctx.strokeStyle=`rgba(220,60,60,${pulse})`; bctx.lineWidth=3/scale; bctx.stroke();
+
+    // Army numbers
+    const fs=Math.max(2.5,Math.min(7,HEX_R*.45));
+    bctx.textAlign='center'; bctx.textBaseline='middle';
+    PROVINCES.forEach((p,i)=>{
+      if(p.cx<wx0-margin||p.cx>wx1+margin)return;
+      if(G.army[i]>0&&canSeeArmy(i)){
+        bctx.font=`${fs}px Cinzel,serif`;
+        bctx.fillStyle='rgba(230,200,140,.9)';
+        bctx.shadowColor='rgba(0,0,0,.95)'; bctx.shadowBlur=2.5;
+        bctx.fillText(fm(G.army[i]),p.cx,p.cy);
+        bctx.shadowBlur=0;
+      }
+    });
+
+    bctx.restore();
+
+    // Dashed arrow attacker → defender (fades in)
+    if(t>0.5){
+      const arrowAlpha=(t-0.5)*2;
+      const fsx=fp.cx*scale+tx, fsy=fp.cy*scale+ty;
+      const tsx2=tp.cx*scale+tx, tsy=tp.cy*scale+ty;
+      bctx.save();
+      bctx.globalAlpha=arrowAlpha*0.75;
+      bctx.strokeStyle='rgba(255,200,80,1)'; bctx.lineWidth=2.5;
+      bctx.setLineDash([10,5]);
+      bctx.lineDashOffset=-ts/30; // animated dash
+      bctx.beginPath(); bctx.moveTo(fsx,fsy); bctx.lineTo(tsx2,tsy); bctx.stroke();
+      bctx.setLineDash([]); bctx.globalAlpha=1; bctx.restore();
+    }
+
+    if(raw<1) requestAnimationFrame(renderFrame);
+    // After zoom: keep last frame static (canvas stays painted)
   }
 
-  // Draw all provinces (full political colors)
-  PROVINCES.forEach((p,i)=>{
-    hexP(p.cx,p.cy);
-    bctx.fillStyle=provColor(i);
-    bctx.fill();
-    const o=G.owner[i];
-    const hasBorder=(NB[i]||[]).some(nb=>G.owner[nb]!==o);
-    if(hasBorder){
-      hexP(p.cx,p.cy);
-      bctx.strokeStyle=o<0&&!p.isSea?'rgba(200,40,40,.8)':'rgba(6,8,14,.6)';
-      bctx.lineWidth=.5/zoomScale;bctx.stroke();
-    }
-  });
+  requestAnimationFrame(renderFrame);
+}
 
-  // Highlight attacker (green) and defender (red) provinces
-  hexP(PROVINCES[fr].cx,PROVINCES[fr].cy);
-  bctx.strokeStyle='rgba(80,255,80,.95)';bctx.lineWidth=2/zoomScale;bctx.stroke();
-  hexP(tp.cx,tp.cy);
-  bctx.strokeStyle='rgba(255,80,80,.95)';bctx.lineWidth=2.5/zoomScale;bctx.stroke();
+// Called when leaving battle screen — animate zoom back to original vp
+function battleZoomOut(done){
+  const bcanvas=document.getElementById('battle-map-canvas');
+  if(!bcanvas||!bcanvas.width){done&&done();return;}
+  const bW=bcanvas.width, bH=bcanvas.height;
+  const bctx=bcanvas.getContext('2d');
 
-  // Army labels on visible provinces
-  const fs=Math.max(3,Math.min(8,HEX_R*.5));
-  bctx.textAlign='center';bctx.textBaseline='middle';
-  PROVINCES.forEach((p,i)=>{
-    if(G.army[i]>0&&canSeeArmy(i)){
-      bctx.font=`${fs}px Cinzel,serif`;
-      bctx.fillStyle='rgba(232,205,145,.9)';
-      bctx.shadowColor='rgba(0,0,0,.9)';bctx.shadowBlur=2;
-      bctx.fillText(fm(G.army[i]),p.cx,p.cy);
-      bctx.shadowBlur=0;
-    }
-  });
-
-  bctx.restore();
-
-  // Arrow overlay from fr to to
-  const [fsx,fsy]=[PROVINCES[fr].cx*zoomScale+bvpTx, PROVINCES[fr].cy*zoomScale+bvpTy];
-  const [tsx,tsy]=[tp.cx*zoomScale+bvpTx, tp.cy*zoomScale+bvpTy];
-  bctx.save();
-  bctx.strokeStyle='rgba(255,200,80,.7)';bctx.lineWidth=3;
-  bctx.setLineDash([8,4]);
-  bctx.beginPath();bctx.moveTo(fsx,fsy);bctx.lineTo(tsx,tsy);bctx.stroke();
-  bctx.setLineDash([]);bctx.restore();
+  // Read where we ended (target we zoomed to)
+  // We'll just fade out the canvas
+  const start=performance.now();
+  const FADE_MS=400;
+  function fade(ts){
+    const t=Math.min((ts-start)/FADE_MS,1);
+    bctx.globalAlpha=1-t;
+    // Just clear with dark fill as we fade
+    bctx.fillStyle='#06080e';
+    bctx.fillRect(0,0,bW,bH);
+    if(t<1) requestAnimationFrame(fade);
+    else { bctx.globalAlpha=1; done&&done(); }
+  }
+  requestAnimationFrame(fade);
 }
 function openAllianceMenu(){
   const PN=G.playerNation,myAl=G.allianceOf[PN];
