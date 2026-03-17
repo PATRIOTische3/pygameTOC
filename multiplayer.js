@@ -14,7 +14,7 @@ const MP = (() => {
   // ── YOUR FIREBASE URL HERE ────────────────────────────────
   // Replace with your own from console.firebase.google.com
   // Format: https://YOUR-PROJECT-default-rtdb.firebaseio.com
-  const FB_URL = (window.TOC_FIREBASE_URL || 'https://timeofconquest-default-rtdb.firebaseio.com').replace(/\/$/, '');
+  const FB_URL = (window.TOC_FIREBASE_URL || 'https://timeofconquest-default-rtdb.europe-west1.firebasedatabase.app').replace(/\/$/, '');
 
   function checkConfig() {
     if (!FB_URL) {
