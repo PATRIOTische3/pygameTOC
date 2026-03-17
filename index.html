@@ -248,9 +248,9 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 .ideo-mo-card{padding:8px 10px;background:rgba(0,0,0,.28);border:1px solid var(--border);cursor:pointer;transition:all .11s;display:flex;align-items:center;gap:10px}
 .ideo-mo-card:hover{border-color:var(--border2)}
 .imp{color:#60cc50}.imm{color:#cc5048}
-#s-battle{align-items:center;justify-content:center;flex-direction:column;background:#06080e}
+#s-battle{align-items:center;justify-content:flex-end;flex-direction:column;background:#06080e;padding-bottom:clamp(16px,3vh,36px)}
 #battle-vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 20%,rgba(4,6,10,.55) 70%,rgba(2,4,8,.88) 100%);z-index:1}
-#battle-card{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.2vh,16px);padding:clamp(14px,2vw,28px) clamp(16px,2.5vw,36px);background:linear-gradient(160deg,rgba(18,10,6,.93),rgba(6,3,2,.97));border:1px solid rgba(201,168,76,.3);box-shadow:0 0 80px rgba(0,0,0,.8),0 0 30px rgba(180,30,20,.12),inset 0 0 40px rgba(0,0,0,.3);min-width:clamp(280px,32vw,460px);max-width:520px}
+#battle-card{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.2vh,16px);padding:clamp(14px,2vw,28px) clamp(16px,2.5vw,36px);background:linear-gradient(160deg,rgba(18,10,6,.93),rgba(6,3,2,.97));border:1px solid rgba(201,168,76,.3);box-shadow:0 0 80px rgba(0,0,0,.8),0 0 30px rgba(180,30,20,.12),inset 0 0 40px rgba(0,0,0,.3);min-width:clamp(280px,40vw,520px);max-width:600px;cursor:pointer}
 #battle-card::before{content:'';display:block;position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.5) 30%,rgba(201,168,76,.7) 50%,rgba(201,168,76,.5) 70%,transparent)}
 #battle-card::after{content:'';display:block;position:absolute;bottom:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.25) 50%,transparent)}
 .btitle{font-family:'Cinzel Decorative',serif;font-size:clamp(13px,1.5vw,20px);color:var(--gold);letter-spacing:4px;text-shadow:0 0 20px rgba(201,168,76,.5),0 0 40px rgba(201,168,76,.15)}
@@ -554,13 +554,11 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
   <div id="hud">
     <span class="hud-season" id="h-season">☀️</span>
     <div class="hud-date" id="h-date">Jan 1936</div>
-    <div class="hstat"><div class="hsl">Regions</div><div class="hsv" id="h-reg">—</div></div>
     <div class="hstat"><div class="hsl">Gold</div><div class="hsv" id="h-gld">—</div></div>
     <div class="hstat" id="h-loan-st" style="display:none"><div class="hsl">Debt</div><div class="hsv warn" id="h-debt">—</div></div>
-    <div class="hstat"><div class="hsl">Army</div><div class="hsv" id="h-arm">—</div></div>
-    <div class="hstat" id="h-supply-st"><div class="hsl">Supply</div><div class="hsv" id="h-supply">—</div></div>
     <div class="hstat"><div class="hsl">Pop.</div><div class="hsv" id="h-pop">—</div></div>
     <div class="hstat" id="h-sat-st"><div class="hsl">Satisf.</div><div class="hsv" id="h-sat">—</div></div>
+    <div class="hstat" id="h-tax-st"><div class="hsl">Tax</div><div class="hsv" id="h-tax">25%</div></div>
     <div class="hstat" id="h-reform-st" style="display:none"><div class="hsl">Reform</div><div class="hsv warn" id="h-reform-txt">—</div></div>
     <div class="hud-spacer"></div>
     <div id="mp-ingame-bar">
@@ -568,6 +566,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
       <span id="mp-ig-txt">MP</span>
     </div>
     <button class="save-btn-hud" onclick="openSaveMenu()">💾 Save</button>
+    <button class="save-btn-hud" onclick="saveAndExit()" style="border-color:rgba(180,80,80,.5);color:#c08080">💾 Exit</button>
     <div id="hud-ideo"></div>
     <div class="zoom-btns">
       <button class="zbtn" onclick="zoomBy(1.28)">+</button>
@@ -631,6 +630,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
         <button class="abtn" id="sp-btn-move" onclick="toggleMoveMode()" disabled><span class="ic">🚶</span><span class="al"><span class="am">Move Army</span><span class="as" id="sp-move-sub">Select your territory first</span></span></button>
         <button class="abtn" id="sp-btn-naval" onclick="toggleNavalMode()" disabled><span class="ic">⚓</span><span class="al"><span class="am">Naval Transport</span><span class="as" id="sp-naval-sub">Needs port + coastal territory</span></span></button>
         <div class="sp-sec">🏗 Economy & Building</div>
+        <button class="abtn" onclick="openEconomy()"><span class="ic">💰</span><span class="al"><span class="am">Economy & Taxation</span><span class="as" id="sp-tax-sub">Set tax rates · Appease population</span></span></button>
         <button class="abtn" onclick="openBuild()"><span class="ic">🏗</span><span class="al"><span class="am">Construct Building</span><span class="as" id="sp-bld-sub">Select your territory first</span></span></button>
         <button class="abtn" onclick="openLoan()"><span class="ic">🏦</span><span class="al"><span class="am">Take a Loan</span><span class="as" id="sp-loan-sub">World Bank · 500 / 1000 / 2000g</span></span></button>
         <div class="sp-sec">🤝 Diplomacy</div>
@@ -678,6 +678,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
       <button class="abtn" id="mob-btn-move" onclick="toggleMoveMode()" disabled><span class="ic">🚶</span><span class="al"><span class="am">Move Army</span></span></button>
       <button class="abtn" id="mob-btn-naval" onclick="toggleNavalMode()" disabled><span class="ic">⚓</span><span class="al"><span class="am">Naval</span></span></button>
       <button class="abtn" onclick="openDraft()"><span class="ic">🪖</span><span class="al"><span class="am">Conscript</span></span></button>
+      <button class="abtn" onclick="openEconomy()"><span class="ic">💰</span><span class="al"><span class="am">Economy</span></span></button>
       <button class="abtn" onclick="openBuild()"><span class="ic">🏗</span><span class="al"><span class="am">Build</span></span></button>
       <button class="abtn war-btn" id="btn-atk" onclick="openAttack()" disabled><span class="ic">⚔</span><span class="al"><span class="am">Attack</span><span class="as" id="atk-sub">Select enemy</span></span></button>
       <button class="abtn" onclick="openSponsor()"><span class="ic">🔥</span><span class="al"><span class="am">Sponsor resistance</span></span></button>
@@ -701,9 +702,9 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
   <!-- Vignette over edges -->
   <div id="battle-vignette"></div>
   <!-- Centered battle card -->
-  <div id="battle-card">
+  <div id="battle-card" onclick="skipBattleAnim()">
     <div class="btitle">⚔ Battle Report ⚔</div>
-    <div class="btitle-sub" id="b-subtitle">—</div>
+    <div class="btitle-sub" id="b-subtitle">— click to skip —</div>
     <div class="bfield">
       <div class="bside batk">
         <div class="bst">Attacking from</div>
@@ -804,6 +805,10 @@ function saveToSlot(slot,label){
   const saves=getAllSaves();
   const nat=NATIONS[G.playerNation];
   const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const stateCopy=JSON.parse(JSON.stringify(G,(key,val)=>{
+    if(val instanceof Set)return[...val];
+    return val;
+  }));
   const entry={
     slot,label:label||G.leaderName||'Campaign',
     nation:nat?.name||'?',natColor:nat?.color||'#888',
@@ -812,7 +817,7 @@ function saveToSlot(slot,label){
     regions:G.owner.filter(o=>o===G.playerNation).length,
     gold:Math.round(G.gold[G.playerNation]||0),
     saved:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
-    state:JSON.parse(JSON.stringify(G))
+    state:stateCopy
   };
   const idx=saves.findIndex(s=>s.slot===slot);
   if(idx>=0)saves[idx]=entry;else saves.push(entry);
@@ -824,6 +829,14 @@ function loadFromSlot(slot){
   const entry=getAllSaves().find(s=>s.slot===slot);
   if(!entry){showToast('Save not found');return;}
   Object.assign(G,entry.state);
+  // Restore epidemic province Sets (were serialized as arrays)
+  if(G.epidemics){
+    G.epidemics.forEach(ep=>{
+      if(Array.isArray(ep.provinces)) ep.provinces=new Set(ep.provinces);
+    });
+  }
+  if(!G._allyEpicNotified) G._allyEpicNotified=new Set();
+  else if(Array.isArray(G._allyEpicNotified)) G._allyEpicNotified=new Set(G._allyEpicNotified);
   show('game');
   setTimeout(()=>{
     computeHexRadius();buildCanvas();zoomReset();
@@ -901,7 +914,7 @@ window.openSaveMenu=function(){
         </div>
       </div>`;
     }else{
-      html+=`<div class="save-slot empty-slot" onclick="saveToSlot(${i},'${campLabel.replace(/'/g,'`')}');openSaveMenu()">
+      html+=`<div class="save-slot empty-slot" onclick="saveToSlot(${i},'${campLabel.replace(/'/g,'`')}');setTimeout(openSaveMenu,50)">
         <div class="save-slot-num">${i+1}</div>
         <div class="save-slot-info"><div class="save-slot-name" style="color:var(--dim)">— Empty —</div><div class="save-slot-sub">Click to save here</div></div>
       </div>`;
