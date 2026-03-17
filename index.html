@@ -399,7 +399,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
       <div class="mp-lbl">Create a Room</div>
       <div class="mp-card">
         <div class="mp-card-title">🏰 Host Game</div>
-        <div class="mp-card-desc">Create a room and share the code with your friend. You pick your nation, they pick theirs.</div>
+        <div class="mp-card-desc">Create a room and share the <b>6-digit code</b> with your friend via chat/messenger. Works across different devices on any network.</div>
 
         <!-- Nation picker for host -->
         <div>
@@ -467,8 +467,8 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
     </div>
 
     <div style="font-size:9px;color:var(--dim);text-align:center;line-height:1.8;font-style:italic">
-      Uses WebRTC P2P — connection is direct after handshake.<br>
-      Works on same network. May need TURN server behind strict NAT.
+      Uses Firebase Realtime Database — works on any device, any network.<br>
+      Share the 6-digit code via Telegram, WhatsApp, or any messenger.
     </div>
   </div>
 </div>
@@ -713,7 +713,6 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
 <div id="popup"></div>
 <script src="map.js"></script>
 <script src="game.js"></script>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="multiplayer.js"></script>
 <script>
 // ── INTRO MAP ────────────────────────────────────────────────
