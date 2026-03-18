@@ -1,11 +1,11 @@
 {
   "_comment": "Version format: MAJOR.MINOR.PATCH-YYMMDD",
   "_rules": [
-    "MAJOR — engine rewrites, map changes, save format breaks",
-    "MINOR — new gameplay systems (economy, multiplayer, battle queue...)",
-    "PATCH — bugfixes, UI tweaks, balance changes",
-    "YYMMDD — build date"
+    "MAJOR \u2014 engine rewrites, map changes, save format breaks",
+    "MINOR \u2014 new gameplay systems (economy, multiplayer, battle queue...)",
+    "PATCH \u2014 bugfixes, UI tweaks, balance changes",
+    "YYMMDD \u2014 build date"
   ],
-  "version": "0.7.5-260318",
-  "changelog": "Multiplayer v4.1 — fixed desync, nation pick, invite link, 3-6 players"
+  "version": "0.7.6-260318",
+  "changelog": "MP fix: players array sync, PLAYER_READY msg, cancel join button"
 }

@@ -217,16 +217,12 @@ const MP = (() => {
       case 'PLAYER_JOINED': {
         if (role !== 'host') break;
         mpLog('👤 Player joining…', 'ok');
-        // Reply with current lobby state
+        // Send current taken nations so new player sees who's already picked
         const taken = players.map(p => p.nation);
         broadcast('LOBBY_STATE', {
           taken: taken,
-          playersInfo: players.map(p => ({nation:p.nation, name:(NATIONS[p.nation]&&NATIONS[p.nation].name)||'?'}))
+          playersInfo: players.map(p => ({nation:p.nation, name:p.name||(NATIONS[p.nation]&&NATIONS[p.nation].name)||'?'}))
         });
-        // Enable start button
-        const btn = document.getElementById('mp-start-game-btn');
-        if (btn) btn.removeAttribute('disabled');
-        // Update player count
         _updateHostLobbyUI();
         break;
       }
@@ -249,11 +245,47 @@ const MP = (() => {
 
       // Everyone receives: a player claimed a nation
       case 'NATION_CLAIMED': {
-        if (msg.fromNation !== myNation) {
+        const claimedName = (NATIONS[msg.nation]&&NATIONS[msg.nation].name)||'?';
+        // Mark taken in UI for everyone
+        if (msg.from !== myPlayerId) {
           markNationTaken(msg.nation);
-          mpLog((NATIONS[msg.nation]&&NATIONS[msg.nation].name||'?')+' claimed', 'info');
+          mpLog(claimedName+' claimed', 'info');
         }
-        if (role === 'host') _updateHostLobbyUI();
+        // HOST: add/update this player in the roster
+        if (role === 'host') {
+          // Remove old entry for this player id (in case they switched nation)
+          players = players.filter(p => p.id !== msg.from);
+          players.push({ id: msg.from, nation: msg.nation, name: claimedName });
+          _updateHostLobbyUI();
+          // Enable start button if 2+ players
+          if (players.length >= 2) {
+            const btn = document.getElementById('mp-start-game-btn');
+            if (btn) btn.removeAttribute('disabled');
+          }
+        }
+        break;
+      }
+
+      // HOST receives: player is ready with their nation
+      case 'PLAYER_READY': {
+        if (role !== 'host') break;
+        const readyName = msg.name || (NATIONS[msg.nation]&&NATIONS[msg.nation].name) || '?';
+        // Upsert player
+        players = players.filter(p => p.id !== msg.from);
+        players.push({ id: msg.from, nation: msg.nation, name: readyName });
+        markNationTaken(msg.nation);
+        mpLog('✅ '+readyName+' ready!', 'ok');
+        _updateHostLobbyUI();
+        if (players.length >= 2) {
+          const btn = document.getElementById('mp-start-game-btn');
+          if (btn) btn.removeAttribute('disabled');
+        }
+        // Re-broadcast lobby state so all players see updated taken list
+        const taken = players.map(p => p.nation);
+        broadcast('LOBBY_STATE', {
+          taken: taken,
+          playersInfo: players.map(p => ({nation:p.nation, name:p.name}))
+        });
         break;
       }
 
@@ -602,12 +634,14 @@ const MP = (() => {
 
     playerReady() {
       if(myNation<0){mpLog('Pick a nation first!','warn');return;}
-      // Add self to players list (host will see via NATION_CLAIMED)
+      broadcast('PLAYER_READY', { nation: myNation, name: (NATIONS[myNation]&&NATIONS[myNation].name)||'?' });
       mpLog('✅ Ready!','ok'); setMpStatus('Waiting for host to start…','waiting');
       const pp=document.getElementById('mp-guest-pick-panel');
       if(pp) pp.style.display='none';
       const gw=document.getElementById('mp-guest-waiting');
-      if(gw) gw.style.display='flex';
+      if(gw) { gw.style.display='flex'; }
+      const joinBtn=document.getElementById('mp-join-btn');
+      if(joinBtn) joinBtn.style.display='none';
     },
 
     startMultiplayerGame() {

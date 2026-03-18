@@ -460,11 +460,13 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
           <button class="btn full grn" id="mp-join-ready-btn" onclick="MP.playerReady()" disabled style="margin-top:6px">✓ Ready to Play</button>
         </div>
 
-        <div id="mp-guest-waiting" style="display:none">
-          <div class="mp-spinner"></div>
-          Waiting for host to start the game…
+        <div id="mp-guest-waiting" style="display:none;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;color:var(--dim);font-size:11px;font-style:italic">
+            <div class="mp-spinner"></div>
+            Waiting for host to start the game…
+          </div>
+          <button class="btn full" onclick="mpCancelJoin()" style="border-color:rgba(180,60,60,.5);color:#c08080;padding:7px">✕ Cancel</button>
         </div>
-
         <button class="btn full" id="mp-join-btn" onclick="mpJoinRoom()" style="border-color:#4080c0;color:#80b8f0">Join Room</button>
       </div>
     </div>
@@ -1234,10 +1236,23 @@ function mpJoinRoom() {
   const id = (document.getElementById('mp-join-code')||document.getElementById('mp-join-id'));
   const code = id&&id.value&&id.value.trim();
   if (!code) { popup('Enter a room code!'); return; }
-  document.getElementById('mp-join-btn').disabled = true;
+  const joinBtn = document.getElementById('mp-join-btn');
+  if (joinBtn) joinBtn.style.display = 'none';
   const chatArea = document.getElementById('mp-chat-area');
   if (chatArea) chatArea.style.display = 'flex';
   MP.joinRoom(code);
+}
+
+function mpCancelJoin() {
+  try { MP.disconnect(); } catch(e) {}
+  // Reset join UI
+  const joinBtn = document.getElementById('mp-join-btn');
+  if (joinBtn) { joinBtn.style.display = ''; joinBtn.disabled = false; }
+  const waiting = document.getElementById('mp-guest-waiting');
+  if (waiting) waiting.style.display = 'none';
+  const pickPanel = document.getElementById('mp-guest-pick-panel');
+  if (pickPanel) pickPanel.style.display = 'none';
+  popup('Disconnected', 1500);
 }
 
 function mpCopyId() {
