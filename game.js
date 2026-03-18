@@ -144,7 +144,7 @@ function chkSB(){const b=document.getElementById('startbtn');if(b)b.disabled=SC<
 
 // ── SCREEN MANAGEMENT ─────────────────────────────────────
 function show(id){document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));document.getElementById('s-'+id).classList.add('on');}
-function switchTab(id){document.querySelectorAll('.tab,.tpane').forEach(e=>e.classList.remove('on'));document.getElementById('tab-'+id).classList.add('on');document.getElementById('pane-'+id).classList.add('on');}
+function switchTab(id){document.querySelectorAll('.tab,.tpane').forEach(e=>e.classList.remove('on'));document.getElementById('tab-'+id).classList.add('on');document.getElementById('pane-'+id).classList.add('on');hideProvPopup();}
 function setMapMode(mode){G.mapMode=mode;document.querySelectorAll('.mmbtn').forEach(b=>b.classList.remove('on'));document.getElementById('mm-'+mode).classList.add('on');scheduleDraw();}
 
 // ── GAME START ────────────────────────────────────────────
@@ -621,43 +621,60 @@ function showProvPopup(i, screenX, screenY){
   const isOurs = o === PN;
   const isEnemy = o >= 0 && o !== PN;
   const isIndep = o < 0;
-  const ideo = o >= 0 ? IDEOLOGIES[NATIONS[o]?.ideology] : null;
-  const ownerTxt = o < 0 ? '🔥 Rebels' : NATIONS[o]?.name || '?';
+  const ideo = o >= 0 ? IDEOLOGIES[NATIONS[o]&&NATIONS[o].ideology] : null;
+  const ownerTxt = o < 0 ? '⚡ Rebels' : (NATIONS[o]&&NATIONS[o].name) || '?';
 
   let inc = G.income[i];
   if((G.buildings[i]||[]).includes('factory')) inc = Math.floor(inc*1.8);
+  if(isOurs) inc = Math.floor(inc * ideol().income);
 
   const peace = inPeacePeriod();
-  // Can we attack from a border province?
-  const canAtk = !peace && isEnemy && regsOf(PN).some(r=>G.army[r]>100&&NB[r]?.includes(i));
-  const atkDisabled = peace || (!canAtk && isEnemy);
-  const atkTitle = peace ? `Peace — ${peaceTurnsLeft()} weeks left` : canAtk ? '' : 'No border army';
+  const canAtk = !peace && (isEnemy||isIndep) && regsOf(PN).some(r=>G.army[r]>100&&(NB[r]||[]).includes(i));
   const canMove = isOurs && G.army[i]>100;
 
-  const epId = G.provDisease?.[i];
-  const ep = epId ? G.epidemics?.find(e=>e.id===epId&&e.active) : null;
-  const diseaseHtml = ep ? `<div style="grid-column:1/-1;padding:2px 5px;background:rgba(${hexToRgb(ep.color)},0.15);border:1px solid ${ep.color};font-size:clamp(7px,.7vw,9px);color:${ep.color}">${ep.icon} ${ep.name}</div>` : '';
+  const epId = G.provDisease&&G.provDisease[i];
+  const ep = epId ? G.epidemics&&G.epidemics.find(e=>e.id===epId&&e.active) : null;
+
+  // Stats grid — pick most relevant 4 stats
+  const stats = [];
+  stats.push({l:'Army', v: canSeeArmy(i) ? fm(G.army[i]) : '?'});
+  stats.push({l:'Pop', v: fm(G.pop[i])});
+  stats.push({l:'Income', v: inc+'/mo'});
+  if(isOurs){
+    stats.push({l:'Satisfaction', v: Math.round(G.satisfaction[i]||0)+'%'});
+  } else {
+    stats.push({l:'Terrain', v: TERRAIN[p.terrain||'plains']&&TERRAIN[p.terrain||'plains'].name||'Plains'});
+  }
+
+  const gridHtml = stats.map(s=>`<div class="pp-cell"><div class="pp-label">${s.l}</div><div class="pp-val">${s.v}</div></div>`).join('');
+
+  const diseaseHtml = ep ? `<div class="pp-disease" style="color:${ep.color};border-color:${ep.color}">${ep.icon} ${ep.name}</div>` : '';
+
+  // Action buttons
+  const btns = [];
+  if(isEnemy||isIndep){
+    btns.push({icon:'⚔',lbl:'Attack',cls:'red',disabled:!canAtk,onclick:`hideProvPopup();G.sel=${i};chkBtns();openAttack()`});
+  }
+  if(isOurs&&canMove){
+    btns.push({icon:'🚶',lbl:'Move',cls:'grn',onclick:`hideProvPopup();G.sel=${i};toggleMoveMode()`});
+  }
+  if(isOurs){
+    btns.push({icon:'🏗',lbl:'Build',cls:'',onclick:`hideProvPopup();G.sel=${i};openBuild()`});
+    btns.push({icon:'🪖',lbl:'Draft',cls:'',onclick:`hideProvPopup();G.sel=${i};openDraft()`});
+  }
+  btns.push({icon:'📋',lbl:'Details',cls:'',onclick:`hideProvPopup();G.sel=${i};updateSP(${i});scheduleDraw()`});
+
+  const btnsHtml = btns.map(b=>`<button class="pp-act${b.cls?' '+b.cls:''}" ${b.disabled?'disabled':''} onclick="${b.onclick}"><span class="pp-act-icon">${b.icon}</span><span class="pp-act-lbl">${b.lbl}</span></button>`).join('');
 
   const html = `
     <button class="pp-close" onclick="hideProvPopup()">✕</button>
-    <div class="pp-name">${p.name||p.short||'Province'}${p.isCapital?'★':''}</div>
-    <div class="pp-sub">${ownerTxt}${ideo?' · '+ideo.icon+' '+ideo.name:''} · ${TERRAIN[p.terrain||'plains']?.name||''}</div>
-    <div class="pp-stats">
-      <div class="pp-stat"><div class="pp-sl">Army</div><div class="pp-sv">${canSeeArmy(i)?fm(G.army[i]):'?'}</div></div>
-      <div class="pp-stat"><div class="pp-sl">Population</div><div class="pp-sv">${fm(G.pop[i])}</div></div>
-      <div class="pp-stat"><div class="pp-sl">Income</div><div class="pp-sv">${inc}/mo</div></div>
-      <div class="pp-stat"><div class="pp-sl">Instability</div><div class="pp-sv">${Math.round(G.instab[i]||0)}%</div></div>
-      ${isOurs?`<div class="pp-stat"><div class="pp-sl">Satisfaction</div><div class="pp-sv">${Math.round(G.satisfaction[i]||0)}%</div></div>`:''}
-      ${isOurs?`<div class="pp-stat"><div class="pp-sl">Assimilation</div><div class="pp-sv">${Math.round(G.assim[i]||0)}%</div></div>`:''}
-      ${diseaseHtml}
+    <div class="pp-head">
+      <div class="pp-name">${p.name||p.short||'Province'}${p.isCapital?' ★':''}</div>
+      <div class="pp-sub">${ownerTxt}${ideo?' · '+ideo.icon+' '+ideo.name:''}</div>
     </div>
-    <div class="pp-btns">
-      ${isEnemy||isIndep ? `<button class="pp-btn atk" onclick="hideProvPopup();G.sel=${i};chkBtns();openAttack()" ${atkDisabled?'disabled':''} title="${atkTitle}">⚔ Attack</button>` : ''}
-      ${isOurs ? `<button class="pp-btn ours" onclick="hideProvPopup();G.sel=${i};toggleMoveMode()">🚶 Move</button>` : ''}
-      ${isOurs ? `<button class="pp-btn" onclick="hideProvPopup();G.sel=${i};openBuild()">🏗 Build</button>` : ''}
-      ${isOurs ? `<button class="pp-btn" onclick="hideProvPopup();G.sel=${i};openDraft()">🪖 Draft</button>` : ''}
-      <button class="pp-btn" onclick="hideProvPopup();G.sel=${i};updateSP(${i});scheduleDraw()">📋 Details</button>
-    </div>
+    <div class="pp-grid">${gridHtml}</div>
+    ${diseaseHtml}
+    <div class="pp-actions">${btnsHtml}</div>
   `;
 
   const pp = document.getElementById('prov-popup');
@@ -668,23 +685,18 @@ function showProvPopup(i, screenX, screenY){
   void pi.offsetWidth;
   pi.classList.add('pp-anim');
 
-  // Position above the hex
   pp.style.display = 'block';
-  const ppW = Math.max(200, Math.min(300, window.innerWidth * 0.22));
-  const ppH = pi.offsetHeight || 160;
-  let x = screenX - ppW/2;
-  let y = screenY - ppH - 14; // above hex with tail gap
-
-  // Keep within map bounds
+  const ppW = pi.offsetWidth || 260;
+  const ppH = pi.offsetHeight || 180;
   const wrap = document.getElementById('map-wrap');
   const wrapRect = wrap ? wrap.getBoundingClientRect() : {left:0,top:0,width:window.innerWidth,height:window.innerHeight};
+  let x = screenX - ppW/2;
+  let y = screenY - ppH - 14;
   if(x < 4) x = 4;
   if(x + ppW > wrapRect.width - 4) x = wrapRect.width - ppW - 4;
-  if(y < 4){ y = screenY + 24; } // flip below if no space above
-
+  if(y < 4) y = screenY + 22;
   pp.style.left = x + 'px';
   pp.style.top = y + 'px';
-  pp.style.width = ppW + 'px';
 }
 
 function hideProvPopup(){
@@ -756,7 +768,7 @@ canvas.addEventListener('mousedown',e=>{
 window.addEventListener('mousemove',e=>{
   if(!_pan.active)return;
   const dx=e.clientX-_pan.lx,dy=e.clientY-_pan.ly;
-  if(Math.abs(dx)>3||Math.abs(dy)>3)_moved=true;
+  if(Math.abs(dx)>3||Math.abs(dy)>3){_moved=true;hideProvPopup();}
   vp.tx+=dx;vp.ty+=dy;_pan.lx=e.clientX;_pan.ly=e.clientY;
   scheduleDraw();
 });
@@ -796,7 +808,7 @@ canvas.addEventListener('touchmove',e=>{
   if(e.touches.length===1&&_pan.active){
     const t=e.touches[0];
     const dx=t.clientX-_pan.lx,dy=t.clientY-_pan.ly;
-    if(Math.abs(dx)>2||Math.abs(dy)>2)_moved=true;
+    if(Math.abs(dx)>2||Math.abs(dy)>2){_moved=true;hideProvPopup();}
     vp.tx+=dx;vp.ty+=dy;_pan.lx=t.clientX;_pan.ly=t.clientY;
     scheduleDraw();
   }else if(e.touches.length===2&&_pinch.active){
