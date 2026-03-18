@@ -6,6 +6,6 @@
     "PATCH \u2014 bugfixes, UI tweaks, balance changes",
     "YYMMDD \u2014 build date"
   ],
-  "version": "0.7.6-260318",
-  "changelog": "MP fix: players array sync, PLAYER_READY msg, cancel join button"
+  "version": "0.8.0-260318",
+  "changelog": "AI weekly attacks+smart buildings+personality, draft queue, disease++, MP v4.3, session resume banner"
 }
