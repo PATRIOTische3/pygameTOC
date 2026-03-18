@@ -6,6 +6,6 @@
     "PATCH — bugfixes, UI tweaks, balance changes",
     "YYMMDD — build date"
   ],
-  "version": "0.7.4-260318",
-  "changelog": "none"
+  "version": "0.7.5-260318",
+  "changelog": "Multiplayer v4.1 — fixed desync, nation pick, invite link, 3-6 players"
 }

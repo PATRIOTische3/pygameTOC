@@ -433,7 +433,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
           <div class="mp-room-code" id="mp-room-id" onclick="mpCopyId()" title="Click to copy">—</div>
           <div class="mp-copy-hint">CLICK CODE TO COPY</div>
           <div style="margin:4px 0;font-size:9px;color:var(--dim)">Or share link:</div>
-          <a id="mp-invite-link" href="#" onclick="mpCopyLink(event)" style="font-size:9px;color:#4080c0;word-break:break-all;cursor:pointer;display:block;margin-bottom:6px">—</a>
+          <div id="mp-invite-link" style="font-size:9px;color:#4080c0;word-break:break-all;padding:4px 0;margin-bottom:2px">—</div><button class="btn" onclick="mpCopyLink()" style="padding:4px 10px;font-size:8px;margin-bottom:6px">📋 Copy link</button>
           <div class="mp-waiting" id="mp-waiting-text">
             <div class="mp-spinner"></div>
             Waiting for players…
@@ -1253,13 +1253,18 @@ function mpCopyId() {
     });
 }
 
-function mpCopyLink(e) {
-  e&&e.preventDefault();
+function mpCopyLink() {
   const linkEl = document.getElementById('mp-invite-link');
-  const url = linkEl&&linkEl.textContent;
-  if (!url||url==='—') return;
-  navigator.clipboard&&navigator.clipboard.writeText(url).then(() => popup('✓ Invite link copied!', 1800))
-    .catch(() => popup('Copy the link manually', 2000));
+  const url = linkEl&&linkEl.textContent&&linkEl.textContent.trim();
+  if (!url||url==='—') { popup('Create a room first!', 1500); return; }
+  navigator.clipboard&&navigator.clipboard.writeText(url)
+    .then(() => popup('✓ Invite link copied!', 1800))
+    .catch(() => {
+      const ta=document.createElement('textarea'); ta.value=url;
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      popup('✓ Copied!', 1800);
+    });
 }
 
 // Host can enable Start button once 2+ players joined
