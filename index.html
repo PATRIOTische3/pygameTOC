@@ -573,6 +573,7 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;b
     </div>
     <button class="save-btn-hud" onclick="openSaveMenu()">💾 Save</button>
     <button class="save-btn-hud" onclick="saveAndExit()" style="border-color:rgba(180,80,80,.5);color:#c08080">💾 Exit</button>
+    <button class="save-btn-hud" id="fast-mode-btn" onclick="toggleFastMode()" title="Fast mode — skip battle animations">▶▶</button>
     <div id="hud-ideo"></div>
     <div class="zoom-btns">
       <button class="zbtn" onclick="zoomBy(1.28)">+</button>
@@ -1258,6 +1259,32 @@ function mpSetFirebase() {
 // Hardcoded Firebase URL — no input needed
 (function(){
   window.TOC_FIREBASE_URL = 'https://timeofconquest-default-rtdb.europe-west1.firebasedatabase.app';
+})();
+
+// ── SESSION RESTORE on reload ─────────────────────────────
+// If the player was in-game and refreshes, restore immediately
+(function(){
+  try{
+    const raw=sessionStorage.getItem('toc_session');
+    if(!raw)return;
+    const state=JSON.parse(raw);
+    if(!state||state.playerNation==null)return;
+    // Restore Sets in epidemics
+    Object.assign(G,state);
+    if(G.epidemics){G.epidemics.forEach(ep=>{if(Array.isArray(ep.provinces))ep.provinces=new Set(ep.provinces);});}
+    if(!G._allyEpicNotified)G._allyEpicNotified=new Set();
+    else if(Array.isArray(G._allyEpicNotified))G._allyEpicNotified=new Set(G._allyEpicNotified);
+    if(!G.moveQueue)G.moveQueue=[];
+    if(!G.battleQueue)G.battleQueue=[];
+    if(!G._enemyAttackQueue)G._enemyAttackQueue=[];
+    // Show game screen
+    show('game');
+    setTimeout(()=>{
+      computeHexRadius();buildCanvas();zoomReset();
+      updateHUD();updateIdeoHUD();updateSeasonUI();
+      addLog('↺ Session restored.','event');
+    },80);
+  }catch(e){console.warn('Session restore failed',e);}
 })();
 </script>
 </body>

@@ -1830,7 +1830,19 @@ function launchAtk(breakDiplo){
   scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);chkBtns();
 }
 
-// ── BATTLE QUEUE EXECUTION ────────────────────────────────
+// ── FAST MODE ─────────────────────────────────────────────
+// When active: battle/move overlays skip instantly, no zoom animation
+let _fastMode = false;
+function toggleFastMode(){
+  _fastMode = !_fastMode;
+  const btn = document.getElementById('fast-mode-btn');
+  if(btn){
+    btn.style.color = _fastMode ? 'var(--gold)' : 'var(--dim)';
+    btn.style.borderColor = _fastMode ? 'var(--gold)' : 'var(--border)';
+    btn.title = _fastMode ? 'Fast mode ON — click to disable' : 'Fast mode — skip battle animations';
+  }
+  popup(_fastMode ? '▶▶ Fast mode ON' : '▶ Normal mode', 1500);
+}
 // Called from endTurn — runs all queued player battles in sequence with animation
 function executeMoveQueue(){
   if(!G.moveQueue||!G.moveQueue.length) return;
@@ -2010,6 +2022,7 @@ function _ensureBattleStyles(){
 }
 
 function _animZoomTo(fr, to, offsetY){
+  if(_fastMode) return; // skip zoom in fast mode
   const tp=PROVINCES[to], fp=fr>=0?PROVINCES[fr]:tp;
   if(!tp||!fp||CW<=0||CH<=0)return;
   const midX=(tp.cx+(fp?fp.cx:tp.cx))/2;
@@ -2034,6 +2047,9 @@ function _animZoomTo(fr, to, offsetY){
 }
 
 function _showOverlayCard(html, onDismiss, autoMs){
+  // Fast mode — skip overlay entirely
+  if(_fastMode){ onDismiss&&onDismiss(); return; }
+
   _ensureBattleStyles();
   // Activate fog
   const fog=document.getElementById('battle-fog');
@@ -2552,6 +2568,8 @@ function autoSave(){
     const idx=saves.findIndex(s=>s.slot===0);
     if(idx>=0)saves[idx]=entry;else saves.unshift(entry);
     setSaves(saves);
+    // Also save to sessionStorage for instant reload recovery
+    try{sessionStorage.setItem('toc_session',JSON.stringify(stateCopy));}catch(e){}
   }catch(e){console.warn('Autosave failed',e);}
 }
 
@@ -2633,8 +2651,8 @@ function processEpidemics(fullMonth=false){
   // ── Random new outbreaks — very rare, monthly only ────────
   if(fullMonth){
     const atWar=G.war[G.playerNation]&&G.war[G.playerNation].some(w=>w);
-    // ~10% per year in peace, ~25% in war. Single roll per month.
-    const baseChance=(atWar?0.02:0.008)*seasonMult;
+    // ~30% per year in peace, ~60% in war — visible but not overwhelming
+    const baseChance=(atWar?0.05:0.025)*seasonMult;
     if(Math.random()<baseChance){
       const candidates=PROVINCES.map((_,i)=>i).filter(i=>!PROVINCES[i].isSea);
       const origin=candidates[Math.floor(Math.random()*candidates.length)];
