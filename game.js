@@ -174,8 +174,7 @@ function startGame(){
   G._allyEpicNotified=new Set();
   G.taxRate=25;
   G.taxMood=PROVINCES.map(()=>0);
-  G.battleQueue=[];
-  G._enemyAttackQueue=[]; // 0 = neutral, negative = angry about taxes
+  G.battleQueue=[]; // 0 = neutral, negative = angry about taxes
   G.resBase=PROVINCES.map(p=>({...((p.res)||{})}));
   G.resPool={oil:0,coal:0,grain:0,steel:0};
   G.loans=[];G.totalDebt=0;
@@ -1720,82 +1719,27 @@ function launchAtk(breakDiplo){
 
 // ── BATTLE QUEUE EXECUTION ────────────────────────────────
 // Called from endTurn — runs all queued player battles in sequence with animation
-function _restoreVP(){
-  if(!window._preBattleVP)return;
-  const saved=window._preBattleVP;
-  window._preBattleVP=null;
-  const startScale=vp.scale,startTx=vp.tx,startTy=vp.ty;
-  const ANIM_MS=500;const startT=performance.now();
-  function easeInOut(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
-  function frame(now){
-    const t=easeInOut(Math.min((now-startT)/ANIM_MS,1));
-    vp.scale=startScale+(saved.scale-startScale)*t;
-    vp.tx=startTx+(saved.tx-startTx)*t;
-    vp.ty=startTy+(saved.ty-startTy)*t;
-    scheduleDraw();
-    if(t<1)requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-}
-
-// Approximate enemy force display (fog of war)
-function approxForce(real){
-  // Round to nearest "nice" number to simulate intel uncertainty
-  if(real<50) return real;
-  const magnitude=Math.pow(10,Math.floor(Math.log10(real)));
-  const factor=magnitude>=1000?500:magnitude>=100?50:10;
-  const base=Math.round(real/factor)*factor;
-  // Add small random offset ±15%
-  const jitter=Math.round((rf(-0.12,0.12)*real)/factor)*factor;
-  return Math.max(factor,base+jitter);
-}
-
 function executeBattleQueue(onAllDone){
-  const playerQueue=G.battleQueue&&G.battleQueue.length?[...G.battleQueue]:[];
+  if(!G.battleQueue||!G.battleQueue.length){onAllDone();return;}
+  const queue=[...G.battleQueue];
   G.battleQueue=[];
-  const enemyQueue=G._enemyAttackQueue&&G._enemyAttackQueue.length?[...G._enemyAttackQueue]:[];
-  G._enemyAttackQueue=[];
+  let idx=0;
 
-  if(!playerQueue.length&&!enemyQueue.length){onAllDone();return;}
-
-  // Save viewport before any battle animations
-  window._preBattleVP={scale:vp.scale,tx:vp.tx,ty:vp.ty};
-
-  let pidx=0;
-
-  function runPlayerNext(){
-    if(pidx>=playerQueue.length){
-      // Done with player battles — show enemy attacks
-      runEnemyQueue(onAllDone);
-      return;
-    }
-    const {fr,to,force}=playerQueue[pidx++];
-    if(G.owner[fr]!==G.playerNation){runPlayerNext();return;}
-    if(G.owner[to]===G.playerNation){runPlayerNext();return;}
+  function runNext(){
+    if(idx>=queue.length){onAllDone();return;}
+    const {fr,to,force}=queue[idx++];
+    // Validate — province might have changed hands
+    if(G.owner[fr]!==G.playerNation){runNext();return;}
+    if(G.owner[to]===G.playerNation){runNext();return;}
     const actualForce=Math.min(force,G.army[fr]);
-    if(actualForce<1){runPlayerNext();return;}
+    if(actualForce<1){runNext();return;}
     runBattle(fr,to,actualForce,G.playerNation,()=>{
       scheduleDraw();updateHUD();chkVic();
-      setTimeout(runPlayerNext,400);
+      // Brief pause between battles
+      setTimeout(runNext,400);
     });
   }
-
-  function runEnemyQueue(done){
-    if(!enemyQueue.length){
-      _restoreVP();
-      done();
-      return;
-    }
-    let eidx=0;
-    function showNext(){
-      if(eidx>=enemyQueue.length){_restoreVP();done();return;}
-      const ev=enemyQueue[eidx++];
-      showEnemyAttackOverlay(ev,()=>setTimeout(showNext,300));
-    }
-    showNext();
-  }
-
-  runPlayerNext();
+  runNext();
 }
 
 // Skip current battle animation — called when player clicks battle card
@@ -1853,158 +1797,107 @@ function runBattle(fr,to,atkF,atker,done){
   showBattleOverlay(fr, to, win, atkF, al, done);
 }
 
-// ── BATTLE OVERLAY ────────────────────────────────────────
-// Inject CSS once
-function _ensureBattleStyles(){
-  if(document.getElementById('battle-overlay-style'))return;
-  const st=document.createElement('style');
-  st.id='battle-overlay-style';
-  st.textContent=`
-    @keyframes battleSlideUp{from{opacity:0;transform:translateX(-50%) translateY(40px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-    #battle-fog{position:fixed;inset:0;z-index:490;pointer-events:none;background:rgba(4,6,12,.0);transition:background .4s ease}
-    #battle-fog.active{background:rgba(4,6,12,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-    #battle-overlay{position:fixed;bottom:clamp(16px,4vh,40px);left:50%;transform:translateX(-50%);z-index:500;cursor:pointer;
-      width:min(94vw,540px);
-      background:linear-gradient(160deg,rgba(18,10,6,.98),rgba(6,3,2,.99));
-      border:1px solid rgba(201,168,76,.4);
-      padding:clamp(14px,2.5vh,22px) clamp(16px,3vw,28px) clamp(12px,2vh,18px);
-      box-shadow:0 0 80px rgba(0,0,0,.95),0 0 30px rgba(180,30,20,.2);
-      font-family:"IM Fell English",serif;color:#e8d5a3}
-  `;
-  document.head.appendChild(st);
-  // Fog layer
-  const fog=document.createElement('div');
-  fog.id='battle-fog';
-  document.body.appendChild(fog);
-}
+// ── BATTLE OVERLAY (replaces full battle screen) ─────────
+// Shows battle card as overlay on the game map — no screen switching, no canvas freeze
+function showBattleOverlay(fr, to, win, atkF, al, done){
+  const tp=PROVINCES[to], fp=PROVINCES[fr];
 
-function _animZoomTo(fr, to, offsetY){
-  const tp=PROVINCES[to], fp=fr>=0?PROVINCES[fr]:tp;
-  if(!tp||!fp||CW<=0||CH<=0)return;
-  const midX=(tp.cx+(fp?fp.cx:tp.cx))/2;
-  const midY=(tp.cy+(fp?fp.cy:tp.cy))/2;
-  const dist=fp!==tp?Math.sqrt((tp.cx-fp.cx)**2+(tp.cy-fp.cy)**2):0;
-  const targetScale=Math.min(CW,CH)/(Math.max(dist*4,HEX_R*16));
-  const endScale=Math.max(1.5,Math.min(targetScale,10));
-  const endTx=CW/2-midX*endScale;
-  const endTy=(CH*(offsetY||0.40))-midY*endScale;
-  const startScale=vp.scale,startTx=vp.tx,startTy=vp.ty;
-  const ANIM_MS=550;const startT=performance.now();
-  function easeOut(t){return 1-Math.pow(1-t,3);}
-  function frame(now){
-    const t=easeOut(Math.min((now-startT)/ANIM_MS,1));
-    vp.scale=startScale+(endScale-startScale)*t;
-    vp.tx=startTx+(endTx-startTx)*t;
-    vp.ty=startTy+(endTy-startTy)*t;
-    scheduleDraw();
-    if(t<1)requestAnimationFrame(frame);
+  // Animate zoom to battle location
+  if(tp&&fp&&CW>0&&CH>0){
+    const midX=(tp.cx+fp.cx)/2, midY=(tp.cy+fp.cy)/2;
+    const dist=Math.sqrt((tp.cx-fp.cx)**2+(tp.cy-fp.cy)**2);
+    const targetScale=Math.min(CW,CH)/(Math.max(dist*4,HEX_R*16));
+    const endScale=Math.max(1.5,Math.min(targetScale,10));
+    const endTx=CW/2-midX*endScale;
+    const endTy=CH*0.42-midY*endScale; // slightly above center so card doesn't overlap
+
+    const startScale=vp.scale, startTx=vp.tx, startTy=vp.ty;
+    const ANIM_MS=600;
+    const startT=performance.now();
+
+    function easeOut(t){return 1-Math.pow(1-t,3);}
+    function animZoom(now){
+      const t=easeOut(Math.min((now-startT)/ANIM_MS,1));
+      vp.scale=startScale+(endScale-startScale)*t;
+      vp.tx=startTx+(endTx-startTx)*t;
+      vp.ty=startTy+(endTy-startTy)*t;
+      scheduleDraw();
+      if(t<1) requestAnimationFrame(animZoom);
+    }
+    requestAnimationFrame(animZoom);
   }
-  requestAnimationFrame(frame);
-}
 
-function _showOverlayCard(html, onDismiss, autoMs){
-  _ensureBattleStyles();
-  // Activate fog
-  const fog=document.getElementById('battle-fog');
-  if(fog){void fog.offsetWidth;fog.classList.add('active');}
-
+  // Build/update overlay card
   let ov=document.getElementById('battle-overlay');
   if(!ov){
-    ov=document.createElement('div');ov.id='battle-overlay';
+    ov=document.createElement('div');
+    ov.id='battle-overlay';
+    ov.style.cssText='position:fixed;bottom:clamp(12px,3vh,32px);left:50%;transform:translateX(-50%);z-index:500;cursor:pointer;min-width:320px;max-width:560px;width:min(90vw,480px);background:linear-gradient(160deg,rgba(18,10,6,.97),rgba(6,3,2,.99));border:1px solid rgba(201,168,76,.35);padding:14px 20px 12px;box-shadow:0 0 60px rgba(0,0,0,.9),0 0 20px rgba(180,30,20,.15);font-family:"IM Fell English",serif;color:#e8d5a3;animation:battleSlideUp .35s cubic-bezier(.2,.8,.3,1) both';
+    // Add slide-up keyframe if not present
+    if(!document.getElementById('battle-overlay-style')){
+      const st=document.createElement('style');
+      st.id='battle-overlay-style';
+      st.textContent='@keyframes battleSlideUp{from{opacity:0;transform:translateX(-50%) translateY(30px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+      document.head.appendChild(st);
+    }
     document.body.appendChild(ov);
+  } else {
+    // Re-trigger animation
+    ov.style.animation='none';
+    void ov.offsetWidth;
+    ov.style.animation='battleSlideUp .35s cubic-bezier(.2,.8,.3,1) both';
   }
-  ov.style.animation='none';void ov.offsetWidth;
-  ov.style.animation='battleSlideUp .38s cubic-bezier(.2,.8,.3,1) both';
   ov.style.display='block';
-  ov.innerHTML=html;
-
-  let _gone=false;
-  let _t=null;
-  function dismiss(){
-    if(_gone)return;_gone=true;
-    if(_t)clearTimeout(_t);
-    window._battleSkipFn=null;
-    if(fog)fog.classList.remove('active');
-    ov.style.transition='opacity .22s ease,transform .22s ease';
-    ov.style.opacity='0';
-    ov.style.transform='translateX(-50%) translateY(24px)';
-    setTimeout(()=>{
-      ov.style.display='none';
-      ov.style.transition='';ov.style.opacity='';ov.style.transform='';
-      onDismiss&&onDismiss();
-    },220);
-  }
-  window._battleSkipFn=dismiss;
-  ov.onclick=dismiss;
-  _t=setTimeout(dismiss,autoMs||3000);
-}
-
-function showBattleOverlay(fr, to, win, atkF, al, done){
-  _animZoomTo(fr, to, 0.38);
 
   const resColor=win?'#90ff80':'#ff9080';
-  const resText=win?`✦ Victory — ${PROVINCES[to]&&PROVINCES[to].name} occupied!`:`✗ Repelled! Lost ${fa(al)}.`;
-  const defArmy=win?al:G.army[to]||0;
+  const resText=win?`✦ Victory — ${PROVINCES[to]?.name} occupied!`:`✗ Repelled! Lost ${fa(al)}.`;
+  const defArmy=win?al:G.army[to]; // show losses if win, current army if lost
 
-  const html=`
-    <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(12px,2vw,16px);color:#c9a84c;letter-spacing:3px;text-align:center;margin-bottom:6px">⚔ Battle Report ⚔</div>
-    <div style="font-size:clamp(8px,1.2vw,10px);color:#4a3828;letter-spacing:2px;text-align:center;margin-bottom:12px">${(PROVINCES[fr]&&PROVINCES[fr].short)||'?'} → ${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
-    <div style="display:flex;gap:0;margin-bottom:12px">
-      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(30,70,20,.35);border:1px solid rgba(70,150,50,.4);border-right:none">
-        <div style="font-size:clamp(7px,1vw,9px);color:#80c860;letter-spacing:2px;margin-bottom:5px">ATTACKING</div>
-        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${(PROVINCES[fr]&&PROVINCES[fr].short)||'?'}</div>
-        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#a0e870;line-height:1">${fa(atkF)}</div>
+  ov.innerHTML=`
+    <div style="font-family:'Cinzel Decorative',serif;font-size:13px;color:#c9a84c;letter-spacing:3px;text-align:center;margin-bottom:6px">⚔ Battle Report ⚔</div>
+    <div style="font-size:8px;color:#4a3828;letter-spacing:2px;text-align:center;margin-bottom:10px">${PROVINCES[fr]?.short||'?'} → ${PROVINCES[to]?.name||'?'}</div>
+    <div style="display:flex;gap:0;margin-bottom:10px">
+      <div style="flex:1;text-align:center;padding:8px 10px;background:rgba(30,70,20,.35);border:1px solid rgba(70,150,50,.35);border-right:none">
+        <div style="font-size:7px;color:#80c860;letter-spacing:2px;margin-bottom:4px">ATTACKING</div>
+        <div style="font-size:9px;color:#e8d5a3;margin-bottom:3px">${PROVINCES[fr]?.short||'?'}</div>
+        <div style="font-size:30px;font-family:'Cinzel',serif;font-weight:700;color:#a0e870">${fa(atkF)}</div>
       </div>
-      <div style="display:flex;align-items:center;padding:0 clamp(12px,2vw,18px);font-family:'Cinzel Decorative',serif;font-size:clamp(20px,3.5vw,28px);color:#d43030">VS</div>
-      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(70,16,16,.35);border:1px solid rgba(150,40,40,.4);border-left:none">
-        <div style="font-size:clamp(7px,1vw,9px);color:#c85050;letter-spacing:2px;margin-bottom:5px">DEFENDING</div>
-        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
-        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#e87070;line-height:1">${fa(defArmy)}</div>
-      </div>
-    </div>
-    <div style="text-align:center;padding:clamp(10px,1.8vh,16px) 14px;border:1px solid ${win?'rgba(60,160,40,.5)':'rgba(160,40,40,.5)'};background:${win?'rgba(40,100,20,.22)':'rgba(100,20,20,.22)'};font-family:'Cinzel',serif;font-size:clamp(12px,2vw,15px);letter-spacing:1px;color:${resColor}">${resText}</div>
-    <div style="font-size:clamp(8px,1.1vw,10px);color:#2a2018;text-align:center;margin-top:8px;letter-spacing:1px">tap to continue</div>
-  `;
-
-  _showOverlayCard(html, ()=>{
-    done();
-  }, 3000);
-}
-
-function showEnemyAttackOverlay(ev, done){
-  const {fr, to, atker, send, win, al} = ev;
-  _animZoomTo(fr, to, 0.38);
-
-  // Approximate enemy force (fog of war)
-  const approxSend=approxForce(send);
-  const approxDef=approxForce(G.army[to]||0);
-
-  const resColor=win?'#ff8060':'#a0c880';
-  const resText=win
-    ?`☠ ${ownerName(atker)} seized ${(PROVINCES[to]&&PROVINCES[to].name)||'?'}!`
-    :`✦ ${(PROVINCES[to]&&PROVINCES[to].name)||'?'} repelled the attack!`;
-
-  const html=`
-    <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(11px,1.8vw,15px);color:#c06040;letter-spacing:3px;text-align:center;margin-bottom:6px">⚔ Enemy Attack ⚔</div>
-    <div style="font-size:clamp(8px,1.2vw,10px);color:#4a3020;letter-spacing:2px;text-align:center;margin-bottom:12px">${ownerName(atker)} → ${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
-    <div style="display:flex;gap:0;margin-bottom:12px">
-      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(70,16,16,.35);border:1px solid rgba(150,40,40,.4);border-right:none">
-        <div style="font-size:clamp(7px,1vw,9px);color:#c85050;letter-spacing:2px;margin-bottom:5px">ENEMY FORCE</div>
-        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${ownerName(atker)}</div>
-        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#e87070;line-height:1">~${fa(approxSend)}</div>
-      </div>
-      <div style="display:flex;align-items:center;padding:0 clamp(12px,2vw,18px);font-family:'Cinzel Decorative',serif;font-size:clamp(20px,3.5vw,28px);color:#c09040">VS</div>
-      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(20,50,20,.35);border:1px solid rgba(50,120,40,.4);border-left:none">
-        <div style="font-size:clamp(7px,1vw,9px);color:#80c860;letter-spacing:2px;margin-bottom:5px">YOUR FORCE</div>
-        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
-        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#a0e870;line-height:1">${fa(approxDef)}</div>
+      <div style="display:flex;align-items:center;padding:0 14px;font-family:'Cinzel Decorative',serif;font-size:22px;color:#d43030">VS</div>
+      <div style="flex:1;text-align:center;padding:8px 10px;background:rgba(70,16,16,.35);border:1px solid rgba(150,40,40,.35);border-left:none">
+        <div style="font-size:7px;color:#c85050;letter-spacing:2px;margin-bottom:4px">DEFENDING</div>
+        <div style="font-size:9px;color:#e8d5a3;margin-bottom:3px">${PROVINCES[to]?.name||'?'}</div>
+        <div style="font-size:30px;font-family:'Cinzel',serif;font-weight:700;color:#e87070">${fa(defArmy)}</div>
       </div>
     </div>
-    <div style="text-align:center;padding:clamp(10px,1.8vh,16px) 14px;border:1px solid ${win?'rgba(160,40,40,.5)':'rgba(60,160,40,.5)'};background:${win?'rgba(100,20,20,.22)':'rgba(20,80,10,.22)'};font-family:'Cinzel',serif;font-size:clamp(12px,2vw,15px);letter-spacing:1px;color:${resColor}">${resText}</div>
-    <div style="font-size:clamp(8px,1.1vw,10px);color:#2a2018;text-align:center;margin-top:8px;letter-spacing:1px">tap to continue</div>
+    <div style="text-align:center;padding:10px 14px;border:1px solid ${win?'rgba(60,160,40,.5)':'rgba(160,40,40,.5)'};background:${win?'rgba(40,100,20,.2)':'rgba(100,20,20,.2)'};font-family:'Cinzel',serif;font-size:13px;letter-spacing:1px;color:${resColor}">${resText}</div>
+    <div style="font-size:8px;color:#3a2e1a;text-align:center;margin-top:7px;letter-spacing:1px">click to continue</div>
   `;
 
-  _showOverlayCard(html, done, 3000);
+  let _dismissed=false;
+  let _autoTimer=null;
+
+  function dismiss(){
+    if(_dismissed)return;
+    _dismissed=true;
+    if(_autoTimer)clearTimeout(_autoTimer);
+    window._battleSkipFn=null;
+    // Slide card down before calling done
+    ov.style.transition='opacity .2s ease, transform .2s ease';
+    ov.style.opacity='0';
+    ov.style.transform='translateX(-50%) translateY(20px)';
+    setTimeout(()=>{
+      ov.style.display='none';
+      ov.style.transition='';
+      ov.style.opacity='';
+      ov.style.transform='';
+      done();
+    },200);
+  }
+
+  window._battleSkipFn=dismiss;
+  ov.onclick=dismiss;
+  // Auto-advance after 2.8s
+  _autoTimer=setTimeout(dismiss, 2800);
 }
 
 function drawBattleMap(){ /* no-op — replaced by overlay */ }
@@ -2741,21 +2634,12 @@ function doAI(){
           G.army[fr2]-=send;G.army[to2]=Math.max(50,send-al);G.owner[to2]=ai;
           G.instab[to2]=ri(30,60);G.assim[to2]=ri(5,20);
           if((G.buildings[to2]||[]).includes('fortress'))G.buildings[to2]=G.buildings[to2].filter(b=>b!=='fortress');
-          if(def3===G.playerNation){
-            addLog(`⚔ ${ownerName(ai)} seized ${PROVINCES[to2].name}!`,'war');
-            // Queue enemy attack notification for overlay
-            if(!G._enemyAttackQueue)G._enemyAttackQueue=[];
-            G._enemyAttackQueue.push({fr:fr2,to:to2,atker:ai,send,win:true,al});
-          }
+          if(def3===G.playerNation)addLog(`⚔ ${ownerName(ai)} seized ${PROVINCES[to2].name}!`,'war');
           if(def3>=0&&regsOf(def3).length===0)G.war[ai][def3]=G.war[def3][ai]=false;
           if(PROVINCES[to2].isCapital&&def3>=0)G.capitalPenalty[ai]=3;
         }else{
           G.army[fr2]=Math.max(0,G.army[fr2]-Math.floor(send*rf(.1,.28)));
           G.army[to2]=Math.max(50,G.army[to2]-Math.floor(G.army[to2]*rf(.08,.25)));
-          if(def3===G.playerNation&&Math.random()<0.4){ // only show 40% of failed attacks
-            if(!G._enemyAttackQueue)G._enemyAttackQueue=[];
-            G._enemyAttackQueue.push({fr:fr2,to:to2,atker:ai,send,win:false,al:0});
-          }
         }
       }
     }
