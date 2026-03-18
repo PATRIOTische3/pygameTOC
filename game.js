@@ -175,7 +175,8 @@ function startGame(){
   G.taxRate=25;
   G.taxMood=PROVINCES.map(()=>0);
   G.battleQueue=[];
-  G._enemyAttackQueue=[]; // 0 = neutral, negative = angry about taxes
+  G._enemyAttackQueue=[];
+  G.moveQueue=[]; // queued troop movements: [{from,to,amount}] // 0 = neutral, negative = angry about taxes
   G.resBase=PROVINCES.map(p=>({...((p.res)||{})}));
   G.resPool={oil:0,coal:0,grain:0,steel:0};
   G.loans=[];G.totalDebt=0;
@@ -522,30 +523,55 @@ function drawMap(){
 
   ctx.restore();
 
-  // ── Draw queued battle arrows (screen space) ──────────────
+  // ── Draw queued order arrows (screen space) ──────────────
+  function drawOrderArrow(fsx, fsy, tsx, tsy, color, dashColor, label){
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2.5;
+    ctx.setLineDash([8,4]);
+    ctx.beginPath();ctx.moveTo(fsx,fsy);ctx.lineTo(tsx,tsy);ctx.stroke();
+    ctx.setLineDash([]);
+    // Arrowhead
+    const angle=Math.atan2(tsy-fsy,tsx-fsx);
+    const al=13;
+    ctx.fillStyle=color;
+    ctx.beginPath();
+    ctx.moveTo(tsx,tsy);
+    ctx.lineTo(tsx-al*Math.cos(angle-0.4),tsy-al*Math.sin(angle-0.4));
+    ctx.lineTo(tsx-al*Math.cos(angle+0.4),tsy-al*Math.sin(angle+0.4));
+    ctx.closePath();ctx.fill();
+    // Troop count label above midpoint
+    if(label){
+      const mx=(fsx+tsx)/2, my=(fsy+tsy)/2-10;
+      ctx.font='bold 11px Cinzel,serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(6,8,14,.75)';
+      const tw=ctx.measureText(label).width;
+      ctx.fillRect(mx-tw/2-3,my-7,tw+6,14);
+      ctx.fillStyle=dashColor;
+      ctx.fillText(label,mx,my);
+    }
+    ctx.restore();
+  }
+
+  // Attack arrows — red dashed
   if(G.battleQueue&&G.battleQueue.length){
-    G.battleQueue.forEach(({fr,to})=>{
+    G.battleQueue.forEach(({fr,to,force})=>{
       const fp=PROVINCES[fr],tp=PROVINCES[to];
       if(!fp||!tp)return;
       const [fsx,fsy]=toScreen(fp.cx,fp.cy);
       const [tsx,tsy]=toScreen(tp.cx,tp.cy);
-      // Dashed red arrow
-      ctx.save();
-      ctx.strokeStyle='rgba(255,80,80,.85)';
-      ctx.lineWidth=2.5;
-      ctx.setLineDash([8,4]);
-      ctx.beginPath();ctx.moveTo(fsx,fsy);ctx.lineTo(tsx,tsy);ctx.stroke();
-      ctx.setLineDash([]);
-      // Arrowhead
-      const angle=Math.atan2(tsy-fsy,tsx-fsx);
-      const al=12;
-      ctx.fillStyle='rgba(255,80,80,.9)';
-      ctx.beginPath();
-      ctx.moveTo(tsx,tsy);
-      ctx.lineTo(tsx-al*Math.cos(angle-0.4),tsy-al*Math.sin(angle-0.4));
-      ctx.lineTo(tsx-al*Math.cos(angle+0.4),tsy-al*Math.sin(angle+0.4));
-      ctx.closePath();ctx.fill();
-      ctx.restore();
+      drawOrderArrow(fsx,fsy,tsx,tsy,'rgba(255,80,80,.85)','#ff9090',fm(force));
+    });
+  }
+  // Move arrows — green dashed
+  if(G.moveQueue&&G.moveQueue.length){
+    G.moveQueue.forEach(({from,to,amount})=>{
+      const fp=PROVINCES[from],tp=PROVINCES[to];
+      if(!fp||!tp)return;
+      const [fsx,fsy]=toScreen(fp.cx,fp.cy);
+      const [tsx,tsy]=toScreen(tp.cx,tp.cy);
+      drawOrderArrow(fsx,fsy,tsx,tsy,'rgba(80,220,80,.85)','#a0ffb0',fm(amount));
     });
   }
   if(G.mapMode==='disease'){
@@ -637,7 +663,11 @@ function showProvPopup(i, screenX, screenY){
 
   // Stats grid — pick most relevant 4 stats
   const stats = [];
-  stats.push({l:'Army', v: canSeeArmy(i) ? fm(G.army[i]) : '?'});
+  const avail_army = isOurs ? availableArmy(i) : G.army[i];
+  const armyStr = canSeeArmy(i)
+    ? (isOurs && avail_army < G.army[i] ? `${fm(avail_army)}/${fm(G.army[i])}` : fm(G.army[i]))
+    : '?';
+  stats.push({l:'Army', v: armyStr});
   stats.push({l:'Pop', v: fm(G.pop[i])});
   stats.push({l:'Income', v: inc+'/mo'});
   if(isOurs){
@@ -932,7 +962,11 @@ function updateSP(i){
   sEl('sp-nm',p.name);
   sHTML('sp-bdg',bdg);
   sEl('sp-ow',(o>=0?ownerName(o):'Rebels')+' · '+(TERRAIN[p.terrain||'plains']?.name||'')+' · '+dateStr());
-  sEl('sp-ar',fa(G.army[i]));sEl('sp-pp',fm(G.pop[i]));sEl('sp-in',inc+'/mo');
+  const avArmy=G.owner[i]===G.playerNation?availableArmy(i):G.army[i];
+  const armyDisp=G.owner[i]===G.playerNation&&avArmy<G.army[i]
+    ?`${fa(avArmy)} <span style="color:var(--dim);font-size:9px">(${fa(G.army[i])})</span>`
+    :fa(G.army[i]);
+  sEl('sp-ar',canSeeArmy(i)?fa(avArmy):fa(G.army[i]));sEl('sp-pp',fm(G.pop[i]));sEl('sp-in',inc+'/mo');
   sEl('sp-as',o===G.playerNation?Math.round(G.assim[i])+'%':'—');
   sHTML('sp-res',resHtml);sHTML('sp-blds',bldHtml);
   const spif=document.getElementById('sp-if'),spiv=document.getElementById('sp-iv');
@@ -1071,6 +1105,14 @@ function isMoveTgt(i){
   if(o>=0&&o!==G.playerNation)return false;
   return true;
 }
+// How many troops are available in province (actual minus committed to queues)
+function availableArmy(prov){
+  let committed=0;
+  (G.battleQueue||[]).forEach(b=>{if(b.fr===prov)committed+=b.force;});
+  (G.moveQueue||[]).forEach(m=>{if(m.from===prov)committed+=m.amount;});
+  return Math.max(0,(G.army[prov]||0)-committed);
+}
+
 function openMoveDialog(from,to){
   cancelMove();
   const toOwner=G.owner[to];
@@ -1088,39 +1130,45 @@ function openMoveDialog(from,to){
     return;
   }
 
-  // Moving onto province already at war / independent / own
-  const max=G.army[from]; // ALL troops can move now (no forced 100 reserve)
+  const avail=availableArmy(from);
+  if(avail<=0){popup('No available troops (all committed to orders)!');return;}
+
   const s=season();
-  const terrMod=s.winterTerrain?.includes(PROVINCES[to].terrain)?s.moveMod:1.0;
-  const movNote=terrMod<1?`<p class="mx" style="color:#80c8ff">${s.icon} ${s.name}: movement ×${terrMod} in ${TERRAIN[PROVINCES[to].terrain]?.name}</p>`:'';
+  const terrMod=s.winterTerrain&&s.winterTerrain.includes(PROVINCES[to].terrain)?s.moveMod:1.0;
+  const movNote=terrMod<1?`<p class="mx" style="color:#80c8ff">${s.icon} ${s.name}: movement ×${terrMod}</p>`:'';
   openMo('TROOP MOVEMENT',
-    `<p class="mx"><b>${PROVINCES[from].name}</b> → <b style="color:var(--gold)">${PROVINCES[to].name}</b></p>
+    `<p class="mx"><b>${PROVINCES[from].short}</b> → <b style="color:var(--gold)">${PROVINCES[to].name}</b></p>
      ${movNote}
-     <p class="mx">Available: <b>${fa(max)}</b> soldiers</p>
-     <div class="slider-w"><div class="slider-l"><span>Soldiers</span><span class="slider-v" id="msv">${fa(max)}</span></div>
-     <input type="range" id="msl" min="1" max="${max}" value="${max}" oninput="updSl('msl','msv')"></div>`,
-    [{lbl:'Cancel',cls:'dim'},{lbl:'Move!',cls:'grn',cb:()=>confirmMove(from,to)}]
+     <p class="mx">Available: <b>${fa(avail)}</b> · Total in province: <b style="color:var(--dim)">${fa(G.army[from])}</b></p>
+     <div class="slider-w"><div class="slider-l"><span>Soldiers to send</span><span class="slider-v" id="msv">${fa(avail)}</span></div>
+     <input type="range" id="msl" min="1" max="${avail}" value="${avail}" oninput="updSl('msl','msv')"></div>
+     <p class="mx" style="font-size:9px;color:var(--dim)">Remaining troops stay — you can issue more orders this turn.</p>`,
+    [{lbl:'Cancel',cls:'dim'},{lbl:'→ Queue Move',cls:'grn',cb:()=>confirmMove(from,to)}]
   );
-  setTimeout(()=>document.getElementById('msl')?.style.setProperty('--pct','100%'),40);
+  setTimeout(()=>document.getElementById('msl')&&document.getElementById('msl').style.setProperty('--pct','100%'),40);
 }
+
 function confirmMove(from,to){
-  const v=+(document.getElementById('msl')?.value||G.army[from]);if(!v)return;
-  const s=season();
-  const terrMod=s.winterTerrain?.includes(PROVINCES[to].terrain)?s.moveMod:1.0;
-  const actual=Math.round(v*terrMod);
-  G.army[from]=Math.max(0,G.army[from]-v); // no forced reserve — can move all
-  G.army[to]+=actual;
-  if(actual<v)addLog(`${s.icon} Winter: ${fa(v-actual)} soldiers lost to cold!`,'season');
-  if(G.owner[to]<0)G.owner[to]=G.playerNation; // claim independent
-  scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);
-  addLog(`${PROVINCES[from].short}: ${fa(actual)} soldiers → ${PROVINCES[to].short}.`,'move');
+  const v=+(document.getElementById('msl')&&document.getElementById('msl').value||availableArmy(from));
+  if(!v)return;
+  const avail=availableArmy(from);
+  if(v>avail){popup(`Only ${fa(avail)} available!`);return;}
+  // Add to move queue
+  if(!G.moveQueue)G.moveQueue=[];
+  G.moveQueue.push({from,to,amount:v});
+  closeMo();
+  const remaining=availableArmy(from);
+  addLog(`🚶 Move queued: ${fa(v)} from ${PROVINCES[from].short} → ${PROVINCES[to].short}. ${fa(remaining)} remain.`,'move');
+  popup(`✓ Move queued — ${fa(remaining)} still available in ${PROVINCES[from].short}`);
+  scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);chkBtns();
 }
 function launchAtkFromMove(from,to){
   const en=G.owner[to],PN=G.playerNation;
   if(en>=0)G.war[PN][en]=G.war[en][PN]=true;
+  const force=availableArmy(from);
+  if(force<=0){popup('No available troops!');return;}
   if(!G.battleQueue)G.battleQueue=[];
-  G.battleQueue=G.battleQueue.filter(b=>b.fr!==from);
-  G.battleQueue.push({fr:from,to,force:G.army[from]});
+  G.battleQueue.push({fr:from,to,force});
   addLog(`⚔ Attack ordered: ${PROVINCES[from].short} → ${PROVINCES[to].name}`, 'war');
   popup(`⚔ Attack queued — executes next turn`);
   scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);chkBtns();
@@ -1701,20 +1749,27 @@ function showAttackDialog(fr,to){
   const io=ideol(),terrain=TERRAIN[PROVINCES[to].terrain||'plains'];
   const defBonus=terrain.defB*(hasFort?1.6:1),effDef=Math.round(G.army[to]*defBonus);
   const resist=G.resistance[to];
+  const avail=availableArmy(fr);
   let html='';
   if(hasPact)html+=`<p class="mx" style="color:#e07030">⚠ This will break your non-aggression pact!</p>`;
-  if(hasAlly)html+=`<p class="mx" style="color:#ff6040">⚠ ${NATIONS[en]?.short} is your ALLY! Alliance will be broken!</p>`;
+  if(hasAlly)html+=`<p class="mx" style="color:#ff6040">⚠ ${NATIONS[en]&&NATIONS[en].short} is your ALLY!</p>`;
   if(hasFort)html+=`<p class="mx" style="color:#c09040">🏰 Fortress: defense ×1.6</p>`;
-  if(resist>20)html+=`<p class="mx" style="color:#ff9040">🔥 Resistance: +${Math.round(resist/5)}% attack bonus</p>`;
+  if(resist>20)html+=`<p class="mx" style="color:#ff9040">🔥 Resistance bonus</p>`;
   html+=`<p class="mx">${io.icon} ${io.name}: atk ×${io.atk.toFixed(2)} · ${terrain.name} def ×${terrain.defB.toFixed(1)}</p>`;
   html+=`<p class="mx"><b>${PROVINCES[fr].short}</b> → <b style="color:#ff7070">${PROVINCES[to].name}</b></p>`;
-  html+=`<p class="mx">Your force: <b>${fa(G.army[fr])}</b> · Enemy effective: <b style="color:#ff7070">${fa(effDef)}</b></p>`;
-  html+=`<div class="slider-w"><div class="slider-l"><span>Force to commit</span><span class="slider-v" id="asv">${fa(G.army[fr])}</span></div><input type="range" id="asl" min="100" max="${G.army[fr]}" value="${G.army[fr]}" oninput="updSl('asl','asv')"></div>`;
+  html+=`<p class="mx">Available: <b>${fa(avail)}</b> · Enemy effective: <b style="color:#ff7070">${fa(effDef)}</b></p>`;
+  if(avail>0){
+    html+=`<div class="slider-w"><div class="slider-l"><span>Force to commit</span><span class="slider-v" id="asv">${fa(avail)}</span></div><input type="range" id="asl" min="1" max="${avail}" value="${avail}" oninput="updSl('asl','asv')"></div>`;
+    html+=`<p class="mx" style="font-size:9px;color:var(--dim)">Remaining troops stay — you can order more attacks this turn.</p>`;
+  } else {
+    html+=`<p class="mx" style="color:#ff6040">⚠ All troops already committed to other orders!</p>`;
+  }
+  const canFight=avail>0;
   const btns=hasPact||hasAlly
-    ?[{lbl:'Cancel',cls:'dim'},{lbl:'Break & Attack',cls:'red',cb:()=>launchAtk(true)}]
-    :[{lbl:'Cancel',cls:'dim'},{lbl:'⚔ Attack!',cls:'red',cb:()=>launchAtk(false)}];
-  openMo('DECLARE WAR',html,btns);
-  setTimeout(()=>document.getElementById('asl')?.style.setProperty('--pct','100%'),40);
+    ?[{lbl:'Cancel',cls:'dim'},{lbl:'Break & Queue Attack',cls:'red',cb:()=>canFight&&launchAtk(true)}]
+    :[{lbl:'Cancel',cls:'dim'},{lbl:'⚔ Queue Attack',cls:'red',cb:()=>canFight&&launchAtk(false)}];
+  openMo('QUEUE ATTACK',html,btns);
+  setTimeout(()=>document.getElementById('asl')&&document.getElementById('asl').style.setProperty('--pct','100%'),40);
 }
 function launchAtk(breakDiplo){
   const fr=window._af,to=window._at,force=+(document.getElementById('asl')?.value||G.army[fr]);
@@ -1743,12 +1798,15 @@ function launchAtk(breakDiplo){
 }
 
 function launchAtk(breakDiplo){
-  const fr=window._af,to=window._at,force=+(document.getElementById('asl')?.value||G.army[fr]);
+  const fr=window._af,to=window._at;
+  const force=+(document.getElementById('asl')&&document.getElementById('asl').value||availableArmy(fr));
+  const avail=availableArmy(fr);
+  if(force<=0||force>avail){popup(`Only ${fa(avail)} available!`);return;}
   const en=G.owner[to],PN=G.playerNation;
   if(breakDiplo&&en>=0){
     G.pact[PN][en]=G.pact[en][PN]=false;G.pLeft[PN][en]=G.pLeft[en][PN]=0;
     const ai=G.allianceOf[PN];
-    if(ai>=0&&G.alliance[ai]?.members.includes(en)){
+    if(ai>=0&&G.alliance[ai]&&G.alliance[ai].members.includes(en)){
       G.alliance[ai].members=G.alliance[ai].members.filter(m=>m!==PN);
       G.allianceOf[PN]=-1;
       addLog(`Alliance broken: attacked ally ${ownerName(en)}!`,'diplo');
@@ -1762,20 +1820,37 @@ function launchAtk(breakDiplo){
       addLog(`${ownerName(m)} joined the war as ally of ${ownerName(en)}!`,'war');
     });
   }
-  // Queue the battle instead of executing immediately
+  // Queue — allow MULTIPLE attacks from same province (don't filter by fr)
   if(!G.battleQueue)G.battleQueue=[];
-  // Remove any existing order from same source province
-  G.battleQueue=G.battleQueue.filter(b=>b.fr!==fr);
   G.battleQueue.push({fr,to,force});
-  // Reserve the committed troops visually (subtract from display but not actual yet)
-  addLog(`⚔ Attack ordered: ${PROVINCES[fr].short} → ${PROVINCES[to].name} (${fa(force)} troops)`, 'war');
-  popup(`⚔ Attack queued — executes next turn`);
+  const remaining=availableArmy(fr);
+  addLog(`⚔ Attack queued: ${PROVINCES[fr].short} → ${PROVINCES[to].name} (${fa(force)} troops). ${fa(remaining)} remain.`,'war');
+  popup(`⚔ Attack queued — ${fa(remaining)} still available in ${PROVINCES[fr].short}`);
   closeMo();
   scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);chkBtns();
 }
 
 // ── BATTLE QUEUE EXECUTION ────────────────────────────────
 // Called from endTurn — runs all queued player battles in sequence with animation
+function executeMoveQueue(){
+  if(!G.moveQueue||!G.moveQueue.length) return;
+  const queue=[...G.moveQueue];
+  G.moveQueue=[];
+  const s=season();
+  for(const {from,to,amount} of queue){
+    if(G.owner[from]!==G.playerNation) continue; // lost province
+    const actual=Math.min(amount, G.army[from]);
+    if(actual<=0) continue;
+    const terrMod=s.winterTerrain&&s.winterTerrain.includes(PROVINCES[to]&&PROVINCES[to].terrain)?s.moveMod:1.0;
+    const moved=Math.round(actual*terrMod);
+    G.army[from]=Math.max(0,G.army[from]-actual);
+    G.army[to]=(G.army[to]||0)+moved;
+    if(moved<actual) addLog(`${s.icon} Winter: ${fa(actual-moved)} lost to cold!`,'season');
+    if(G.owner[to]<0) G.owner[to]=G.playerNation; // claim independent
+    addLog(`🚶 ${fa(moved)} moved: ${PROVINCES[from].short} → ${PROVINCES[to]&&PROVINCES[to].short||'?'}.`,'move');
+  }
+}
+
 function _restoreVP(){
   if(!window._preBattleVP)return;
   const saved=window._preBattleVP;
@@ -2304,12 +2379,14 @@ function endTurn(){
 
   // Fleet arrivals every week
   resolveNavalArrivals();
+  // Execute queued moves (instant, no animation needed)
+  executeMoveQueue();
 
   if(!newMonth){
     // Just a week tick — quick update
     scheduleDraw();updateHUD();updateSeasonUI();
     if(G.sel>=0)updateSP(G.sel);chkBtns();
-    // Still execute queued battles on weekly ticks
+    // Execute queued battles
     executeBattleQueue(()=>{
       scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);chkBtns();chkVic();
       setEB(false);
@@ -2556,8 +2633,8 @@ function processEpidemics(fullMonth=false){
   // ── Random new outbreaks — very rare, monthly only ────────
   if(fullMonth){
     const atWar=G.war[G.playerNation]&&G.war[G.playerNation].some(w=>w);
-    // ~2% per year in peace, ~5% in war. Single roll per month.
-    const baseChance=(atWar?0.004:0.0015)*seasonMult;
+    // ~10% per year in peace, ~25% in war. Single roll per month.
+    const baseChance=(atWar?0.02:0.008)*seasonMult;
     if(Math.random()<baseChance){
       const candidates=PROVINCES.map((_,i)=>i).filter(i=>!PROVINCES[i].isSea);
       const origin=candidates[Math.floor(Math.random()*candidates.length)];
