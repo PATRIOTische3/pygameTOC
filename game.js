@@ -111,7 +111,7 @@ const fm=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'k':''+Math.
 const fa=n=>Math.round(n).toLocaleString('en');
 const ideol=()=>IDEOLOGIES[G.ideology];
 const regsOf=n=>PROVINCES.map((_,i)=>i).filter(i=>G.owner[i]===n);
-const ownerName=n=>n<0?'Independent':NATIONS[n]?.short||`#${n}`;
+const ownerName=n=>n<0?'Rebels':NATIONS[n]?.short||`#${n}`;
 const natColor=n=>NATIONS[n]?.color||'#181620';
 const season=()=>getSeason(G.month);
 
@@ -174,7 +174,8 @@ function startGame(){
   G._allyEpicNotified=new Set();
   G.taxRate=25;
   G.taxMood=PROVINCES.map(()=>0);
-  G.battleQueue=[]; // 0 = neutral, negative = angry about taxes
+  G.battleQueue=[];
+  G._enemyAttackQueue=[]; // 0 = neutral, negative = angry about taxes
   G.resBase=PROVINCES.map(p=>({...((p.res)||{})}));
   G.resPool={oil:0,coal:0,grain:0,steel:0};
   G.loans=[];G.totalDebt=0;
@@ -279,19 +280,35 @@ function canSeeArmy(i){
 const TC={plains:'#3a4828',forest:'#2a3a1c',mountain:'#4a3e30',swamp:'#405838',desert:'#4a3e28',urban:'#2a2420',tundra:'#354040'};
 const RES_COLORS={oil:'#8a6020',coal:'#303030',grain:'#5a7020',steel:'#405070'};
 
+const REBEL_COLOR='#c86820'; // orange-amber for rebels
+
 function provColor(i){
   const o=G.owner[i],m=G.mapMode;
+
   if(m==='disease'){
     const epId=G.provDisease?.[i];
     if(epId){
       const ep=G.epidemics?.find(e=>e.id===epId&&e.active);
       if(ep) return ep.color;
-      return '#3a2020'; // epidemic ended but not cleared yet
+      return '#3a2020';
     }
-    // No disease — uniform dark grey (NOT terrain colors)
     return '#1e2020';
   }
-  if(m==='terrain')return TC[PROVINCES[i].terrain]||'#2a2a2a';
+
+  if(m==='instab'){
+    if(PROVINCES[i]?.isSea) return '#0a1828';
+    if(o<0) return '#c86820'; // rebels = orange
+    if(o!==G.playerNation) return '#181a1a'; // grey out others
+    const ins=G.instab[i]||0;
+    if(ins>70) return '#8a0808';
+    if(ins>50) return '#7a2808';
+    if(ins>30) return '#5a4008';
+    if(ins>10) return '#3a4820';
+    return '#1a4010'; // stable = dark green
+  }
+
+  if(m==='terrain') return TC[PROVINCES[i].terrain]||'#2a2a2a';
+
   if(m==='resources'){
     const r=G.resBase[i]||{};
     if(r.oil>0)return'#6a4010';
@@ -300,15 +317,13 @@ function provColor(i){
     if(r.steel>0)return'#283848';
     return'#181618';
   }
-  // Political
-  if(o===G.playerNation){const ins=G.instab[i];return ins>70?'#882808':ins>40?'#6a4008':'#288820';}
+
+  // Political — clean colors, no instability overlay
   if(o<0){
-    // Sea provinces stay dark blue — don't color them as revolts
     if(PROVINCES[i]?.isSea) return '#0a1828';
-    // Independent/revolt land province — dark red-brown, clearly visible
-    const surroundedByPlayer=NB[i]&&NB[i].length>0&&NB[i].every(nb=>G.owner[nb]===G.playerNation||G.owner[nb]<0);
-    return surroundedByPlayer?'#6a1010':'#3a1808';
+    return REBEL_COLOR; // rebels = orange
   }
+  if(o===G.playerNation) return '#288820'; // always solid green for player
   if(atWar(G.playerNation,o))return'#801818';
   if(G.pact[G.playerNation][o])return'#706010';
   if(areAllies(G.playerNation,o))return'#183868';
@@ -386,13 +401,30 @@ function drawMap(){
       const hasBorder=(NB[i]||[]).some(nb=>G.owner[nb]!==o);
       if(hasBorder){
         hexPath(ctx,p.cx,p.cy,r);
-        // Independent revolt land provinces get a red border
-        if(o<0 && !PROVINCES[i]?.isSea){
-          ctx.strokeStyle='rgba(200,40,40,.8)';ctx.lineWidth=1.2/vp.scale;
+        if(o<0 && !PROVINCES[i]?.isSea && G.mapMode==='political'){
+          // Rebel province — subtle orange fill border
+          ctx.save();
+          ctx.setLineDash([2.5/vp.scale,2/vp.scale]);
+          ctx.strokeStyle='rgba(200,100,30,.7)';ctx.lineWidth=1.2/vp.scale;
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        } else if(o===G.playerNation && G.mapMode==='political'){
+          // Player province — check if any neighbor is a rebel; if so draw dashed green border
+          const hasRebelNeighbor=(NB[i]||[]).some(nb=>G.owner[nb]<0&&!PROVINCES[nb]?.isSea);
+          if(hasRebelNeighbor){
+            ctx.save();
+            ctx.setLineDash([3/vp.scale,2/vp.scale]);
+            ctx.strokeStyle='rgba(60,200,60,.85)';ctx.lineWidth=1.6/vp.scale;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+          } else {
+            ctx.strokeStyle='rgba(6,8,14,.65)';ctx.lineWidth=.5/vp.scale;ctx.stroke();
+          }
         } else {
-          ctx.strokeStyle='rgba(6,8,14,.65)';ctx.lineWidth=.5/vp.scale;
+          ctx.strokeStyle='rgba(6,8,14,.65)';ctx.lineWidth=.5/vp.scale;ctx.stroke();
         }
-        ctx.stroke();
       }
     }
   });
@@ -414,17 +446,30 @@ function drawMap(){
         ctx.shadowBlur=0;
       }
 
-      // Revolt icon for independent land provinces
-      if(G.owner[i]<0 && !PROVINCES[i]?.isSea && vp.scale>0.7){
-        ctx.font=`${Math.max(5,fs+2)}px serif`;
+      // Rebel label — only in political mode
+      if(G.owner[i]<0 && !PROVINCES[i]?.isSea && vp.scale>0.8 && G.mapMode==='political'){
+        ctx.font=`bold ${Math.max(4,fs)}px Cinzel,serif`;
+        ctx.fillStyle='rgba(220,130,50,.95)';
         ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=3;
-        ctx.fillText('⚡',p.cx,p.cy);
+        ctx.shadowColor='rgba(0,0,0,.95)';ctx.shadowBlur=3;
+        ctx.fillText('REBELS',p.cx,p.cy);
         ctx.shadowBlur=0;
       }
 
-      // Army count — only when zoomed in enough AND player can see it
-      if(G.army[i]>0 && vp.scale>1.0 && canSeeArmy(i)){
+      // Instab mode — show satisfaction% on player provinces only
+      if(G.mapMode==='instab' && G.owner[i]===G.playerNation && vp.scale>0.9){
+        const sat=Math.round(G.satisfaction[i]||70);
+        const ins=G.instab[i]||0;
+        ctx.font=`bold ${Math.max(4,fs)}px Cinzel,serif`;
+        ctx.fillStyle=ins>70?'#ff8060':ins>40?'#ffcc60':ins>15?'#c0e860':'#80ff80';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.shadowColor='rgba(0,0,0,.95)';ctx.shadowBlur=3;
+        ctx.fillText(sat+'%',p.cx,p.cy);
+        ctx.shadowBlur=0;
+      }
+
+      // Army count — only political/terrain/resources modes, when zoomed in
+      if(G.army[i]>0 && vp.scale>1.0 && canSeeArmy(i) && G.mapMode!=='instab' && G.mapMode!=='disease'){
         ctx.font=`${Math.max(3.5,fs-1.5)}px Cinzel,serif`;
         ctx.fillStyle='rgba(232,205,145,.85)';
         ctx.textAlign='center';ctx.textBaseline='middle';
@@ -577,7 +622,7 @@ function showProvPopup(i, screenX, screenY){
   const isEnemy = o >= 0 && o !== PN;
   const isIndep = o < 0;
   const ideo = o >= 0 ? IDEOLOGIES[NATIONS[o]?.ideology] : null;
-  const ownerTxt = o < 0 ? '⚡ Independent' : NATIONS[o]?.name || '?';
+  const ownerTxt = o < 0 ? '🔥 Rebels' : NATIONS[o]?.name || '?';
 
   let inc = G.income[i];
   if((G.buildings[i]||[]).includes('factory')) inc = Math.floor(inc*1.8);
@@ -874,14 +919,14 @@ function updateSP(i){
 
   sEl('sp-nm',p.name);
   sHTML('sp-bdg',bdg);
-  sEl('sp-ow',(o>=0?ownerName(o):'Independent')+' · '+(TERRAIN[p.terrain||'plains']?.name||'')+' · '+dateStr());
+  sEl('sp-ow',(o>=0?ownerName(o):'Rebels')+' · '+(TERRAIN[p.terrain||'plains']?.name||'')+' · '+dateStr());
   sEl('sp-ar',fa(G.army[i]));sEl('sp-pp',fm(G.pop[i]));sEl('sp-in',inc+'/mo');
   sEl('sp-as',o===G.playerNation?Math.round(G.assim[i])+'%':'—');
   sHTML('sp-res',resHtml);sHTML('sp-blds',bldHtml);
   const spif=document.getElementById('sp-if'),spiv=document.getElementById('sp-iv');
   if(spif){spif.style.width=inst+'%';spif.style.background=inst>70?'#c82808':inst>40?'#c08020':'#389828';}
   if(spiv)spiv.textContent=Math.round(inst)+'%';
-  const spibar=document.getElementById('sp-ibar');if(spibar)spibar.style.display=o===G.playerNation?'block':'none';
+  const spibar=document.getElementById('sp-ibar');if(spibar)spibar.style.display='none';
   // Satisfaction bar
   const sat=G.satisfaction[i]??70;
   const spsat=document.getElementById('sp-sat-fill'),spsatv=document.getElementById('sp-sat-val');
@@ -909,7 +954,7 @@ function updateSP(i){
   ['sp-btn-naval','mob-btn-naval'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=!canNaval;});
   sEl('sp-naval-sub',canNaval?`${navalRch} ports in range`:'Need port + coastal');
   // Mobile
-  sEl('ri-nm',p.name);sHTML('ri-bdg',bdg);sEl('ri-ow',o>=0?ownerName(o):'Independent');
+  sEl('ri-nm',p.name);sHTML('ri-bdg',bdg);sEl('ri-ow',o>=0?ownerName(o):'Rebels');
   sEl('ri-ar',fa(G.army[i]));sEl('ri-pp',fm(G.pop[i]));sEl('ri-in',inc+'/mo');sEl('ri-as',o===G.playerNation?Math.round(G.assim[i])+'%':'—');
   sHTML('ri-res',resHtml);sHTML('ri-blds',bldHtml);
   const riif=document.getElementById('ri-if'),riiv=document.getElementById('ri-iv');
@@ -1719,27 +1764,82 @@ function launchAtk(breakDiplo){
 
 // ── BATTLE QUEUE EXECUTION ────────────────────────────────
 // Called from endTurn — runs all queued player battles in sequence with animation
-function executeBattleQueue(onAllDone){
-  if(!G.battleQueue||!G.battleQueue.length){onAllDone();return;}
-  const queue=[...G.battleQueue];
-  G.battleQueue=[];
-  let idx=0;
+function _restoreVP(){
+  if(!window._preBattleVP)return;
+  const saved=window._preBattleVP;
+  window._preBattleVP=null;
+  const startScale=vp.scale,startTx=vp.tx,startTy=vp.ty;
+  const ANIM_MS=500;const startT=performance.now();
+  function easeInOut(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function frame(now){
+    const t=easeInOut(Math.min((now-startT)/ANIM_MS,1));
+    vp.scale=startScale+(saved.scale-startScale)*t;
+    vp.tx=startTx+(saved.tx-startTx)*t;
+    vp.ty=startTy+(saved.ty-startTy)*t;
+    scheduleDraw();
+    if(t<1)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
 
-  function runNext(){
-    if(idx>=queue.length){onAllDone();return;}
-    const {fr,to,force}=queue[idx++];
-    // Validate — province might have changed hands
-    if(G.owner[fr]!==G.playerNation){runNext();return;}
-    if(G.owner[to]===G.playerNation){runNext();return;}
+// Approximate enemy force display (fog of war)
+function approxForce(real){
+  // Round to nearest "nice" number to simulate intel uncertainty
+  if(real<50) return real;
+  const magnitude=Math.pow(10,Math.floor(Math.log10(real)));
+  const factor=magnitude>=1000?500:magnitude>=100?50:10;
+  const base=Math.round(real/factor)*factor;
+  // Add small random offset ±15%
+  const jitter=Math.round((rf(-0.12,0.12)*real)/factor)*factor;
+  return Math.max(factor,base+jitter);
+}
+
+function executeBattleQueue(onAllDone){
+  const playerQueue=G.battleQueue&&G.battleQueue.length?[...G.battleQueue]:[];
+  G.battleQueue=[];
+  const enemyQueue=G._enemyAttackQueue&&G._enemyAttackQueue.length?[...G._enemyAttackQueue]:[];
+  G._enemyAttackQueue=[];
+
+  if(!playerQueue.length&&!enemyQueue.length){onAllDone();return;}
+
+  // Save viewport before any battle animations
+  window._preBattleVP={scale:vp.scale,tx:vp.tx,ty:vp.ty};
+
+  let pidx=0;
+
+  function runPlayerNext(){
+    if(pidx>=playerQueue.length){
+      // Done with player battles — show enemy attacks
+      runEnemyQueue(onAllDone);
+      return;
+    }
+    const {fr,to,force}=playerQueue[pidx++];
+    if(G.owner[fr]!==G.playerNation){runPlayerNext();return;}
+    if(G.owner[to]===G.playerNation){runPlayerNext();return;}
     const actualForce=Math.min(force,G.army[fr]);
-    if(actualForce<1){runNext();return;}
+    if(actualForce<1){runPlayerNext();return;}
     runBattle(fr,to,actualForce,G.playerNation,()=>{
       scheduleDraw();updateHUD();chkVic();
-      // Brief pause between battles
-      setTimeout(runNext,400);
+      setTimeout(runPlayerNext,400);
     });
   }
-  runNext();
+
+  function runEnemyQueue(done){
+    if(!enemyQueue.length){
+      _restoreVP();
+      done();
+      return;
+    }
+    let eidx=0;
+    function showNext(){
+      if(eidx>=enemyQueue.length){_restoreVP();done();return;}
+      const ev=enemyQueue[eidx++];
+      showEnemyAttackOverlay(ev,()=>setTimeout(showNext,300));
+    }
+    showNext();
+  }
+
+  runPlayerNext();
 }
 
 // Skip current battle animation — called when player clicks battle card
@@ -1797,107 +1897,158 @@ function runBattle(fr,to,atkF,atker,done){
   showBattleOverlay(fr, to, win, atkF, al, done);
 }
 
-// ── BATTLE OVERLAY (replaces full battle screen) ─────────
-// Shows battle card as overlay on the game map — no screen switching, no canvas freeze
-function showBattleOverlay(fr, to, win, atkF, al, done){
-  const tp=PROVINCES[to], fp=PROVINCES[fr];
+// ── BATTLE OVERLAY ────────────────────────────────────────
+// Inject CSS once
+function _ensureBattleStyles(){
+  if(document.getElementById('battle-overlay-style'))return;
+  const st=document.createElement('style');
+  st.id='battle-overlay-style';
+  st.textContent=`
+    @keyframes battleSlideUp{from{opacity:0;transform:translateX(-50%) translateY(40px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    #battle-fog{position:fixed;inset:0;z-index:490;pointer-events:none;background:rgba(4,6,12,.0);transition:background .4s ease}
+    #battle-fog.active{background:rgba(4,6,12,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+    #battle-overlay{position:fixed;bottom:clamp(16px,4vh,40px);left:50%;transform:translateX(-50%);z-index:500;cursor:pointer;
+      width:min(94vw,540px);
+      background:linear-gradient(160deg,rgba(18,10,6,.98),rgba(6,3,2,.99));
+      border:1px solid rgba(201,168,76,.4);
+      padding:clamp(14px,2.5vh,22px) clamp(16px,3vw,28px) clamp(12px,2vh,18px);
+      box-shadow:0 0 80px rgba(0,0,0,.95),0 0 30px rgba(180,30,20,.2);
+      font-family:"IM Fell English",serif;color:#e8d5a3}
+  `;
+  document.head.appendChild(st);
+  // Fog layer
+  const fog=document.createElement('div');
+  fog.id='battle-fog';
+  document.body.appendChild(fog);
+}
 
-  // Animate zoom to battle location
-  if(tp&&fp&&CW>0&&CH>0){
-    const midX=(tp.cx+fp.cx)/2, midY=(tp.cy+fp.cy)/2;
-    const dist=Math.sqrt((tp.cx-fp.cx)**2+(tp.cy-fp.cy)**2);
-    const targetScale=Math.min(CW,CH)/(Math.max(dist*4,HEX_R*16));
-    const endScale=Math.max(1.5,Math.min(targetScale,10));
-    const endTx=CW/2-midX*endScale;
-    const endTy=CH*0.42-midY*endScale; // slightly above center so card doesn't overlap
-
-    const startScale=vp.scale, startTx=vp.tx, startTy=vp.ty;
-    const ANIM_MS=600;
-    const startT=performance.now();
-
-    function easeOut(t){return 1-Math.pow(1-t,3);}
-    function animZoom(now){
-      const t=easeOut(Math.min((now-startT)/ANIM_MS,1));
-      vp.scale=startScale+(endScale-startScale)*t;
-      vp.tx=startTx+(endTx-startTx)*t;
-      vp.ty=startTy+(endTy-startTy)*t;
-      scheduleDraw();
-      if(t<1) requestAnimationFrame(animZoom);
-    }
-    requestAnimationFrame(animZoom);
+function _animZoomTo(fr, to, offsetY){
+  const tp=PROVINCES[to], fp=fr>=0?PROVINCES[fr]:tp;
+  if(!tp||!fp||CW<=0||CH<=0)return;
+  const midX=(tp.cx+(fp?fp.cx:tp.cx))/2;
+  const midY=(tp.cy+(fp?fp.cy:tp.cy))/2;
+  const dist=fp!==tp?Math.sqrt((tp.cx-fp.cx)**2+(tp.cy-fp.cy)**2):0;
+  const targetScale=Math.min(CW,CH)/(Math.max(dist*4,HEX_R*16));
+  const endScale=Math.max(1.5,Math.min(targetScale,10));
+  const endTx=CW/2-midX*endScale;
+  const endTy=(CH*(offsetY||0.40))-midY*endScale;
+  const startScale=vp.scale,startTx=vp.tx,startTy=vp.ty;
+  const ANIM_MS=550;const startT=performance.now();
+  function easeOut(t){return 1-Math.pow(1-t,3);}
+  function frame(now){
+    const t=easeOut(Math.min((now-startT)/ANIM_MS,1));
+    vp.scale=startScale+(endScale-startScale)*t;
+    vp.tx=startTx+(endTx-startTx)*t;
+    vp.ty=startTy+(endTy-startTy)*t;
+    scheduleDraw();
+    if(t<1)requestAnimationFrame(frame);
   }
+  requestAnimationFrame(frame);
+}
 
-  // Build/update overlay card
+function _showOverlayCard(html, onDismiss, autoMs){
+  _ensureBattleStyles();
+  // Activate fog
+  const fog=document.getElementById('battle-fog');
+  if(fog){void fog.offsetWidth;fog.classList.add('active');}
+
   let ov=document.getElementById('battle-overlay');
   if(!ov){
-    ov=document.createElement('div');
-    ov.id='battle-overlay';
-    ov.style.cssText='position:fixed;bottom:clamp(12px,3vh,32px);left:50%;transform:translateX(-50%);z-index:500;cursor:pointer;min-width:320px;max-width:560px;width:min(90vw,480px);background:linear-gradient(160deg,rgba(18,10,6,.97),rgba(6,3,2,.99));border:1px solid rgba(201,168,76,.35);padding:14px 20px 12px;box-shadow:0 0 60px rgba(0,0,0,.9),0 0 20px rgba(180,30,20,.15);font-family:"IM Fell English",serif;color:#e8d5a3;animation:battleSlideUp .35s cubic-bezier(.2,.8,.3,1) both';
-    // Add slide-up keyframe if not present
-    if(!document.getElementById('battle-overlay-style')){
-      const st=document.createElement('style');
-      st.id='battle-overlay-style';
-      st.textContent='@keyframes battleSlideUp{from{opacity:0;transform:translateX(-50%) translateY(30px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
-      document.head.appendChild(st);
-    }
+    ov=document.createElement('div');ov.id='battle-overlay';
     document.body.appendChild(ov);
-  } else {
-    // Re-trigger animation
-    ov.style.animation='none';
-    void ov.offsetWidth;
-    ov.style.animation='battleSlideUp .35s cubic-bezier(.2,.8,.3,1) both';
   }
+  ov.style.animation='none';void ov.offsetWidth;
+  ov.style.animation='battleSlideUp .38s cubic-bezier(.2,.8,.3,1) both';
   ov.style.display='block';
+  ov.innerHTML=html;
 
-  const resColor=win?'#90ff80':'#ff9080';
-  const resText=win?`✦ Victory — ${PROVINCES[to]?.name} occupied!`:`✗ Repelled! Lost ${fa(al)}.`;
-  const defArmy=win?al:G.army[to]; // show losses if win, current army if lost
-
-  ov.innerHTML=`
-    <div style="font-family:'Cinzel Decorative',serif;font-size:13px;color:#c9a84c;letter-spacing:3px;text-align:center;margin-bottom:6px">⚔ Battle Report ⚔</div>
-    <div style="font-size:8px;color:#4a3828;letter-spacing:2px;text-align:center;margin-bottom:10px">${PROVINCES[fr]?.short||'?'} → ${PROVINCES[to]?.name||'?'}</div>
-    <div style="display:flex;gap:0;margin-bottom:10px">
-      <div style="flex:1;text-align:center;padding:8px 10px;background:rgba(30,70,20,.35);border:1px solid rgba(70,150,50,.35);border-right:none">
-        <div style="font-size:7px;color:#80c860;letter-spacing:2px;margin-bottom:4px">ATTACKING</div>
-        <div style="font-size:9px;color:#e8d5a3;margin-bottom:3px">${PROVINCES[fr]?.short||'?'}</div>
-        <div style="font-size:30px;font-family:'Cinzel',serif;font-weight:700;color:#a0e870">${fa(atkF)}</div>
-      </div>
-      <div style="display:flex;align-items:center;padding:0 14px;font-family:'Cinzel Decorative',serif;font-size:22px;color:#d43030">VS</div>
-      <div style="flex:1;text-align:center;padding:8px 10px;background:rgba(70,16,16,.35);border:1px solid rgba(150,40,40,.35);border-left:none">
-        <div style="font-size:7px;color:#c85050;letter-spacing:2px;margin-bottom:4px">DEFENDING</div>
-        <div style="font-size:9px;color:#e8d5a3;margin-bottom:3px">${PROVINCES[to]?.name||'?'}</div>
-        <div style="font-size:30px;font-family:'Cinzel',serif;font-weight:700;color:#e87070">${fa(defArmy)}</div>
-      </div>
-    </div>
-    <div style="text-align:center;padding:10px 14px;border:1px solid ${win?'rgba(60,160,40,.5)':'rgba(160,40,40,.5)'};background:${win?'rgba(40,100,20,.2)':'rgba(100,20,20,.2)'};font-family:'Cinzel',serif;font-size:13px;letter-spacing:1px;color:${resColor}">${resText}</div>
-    <div style="font-size:8px;color:#3a2e1a;text-align:center;margin-top:7px;letter-spacing:1px">click to continue</div>
-  `;
-
-  let _dismissed=false;
-  let _autoTimer=null;
-
+  let _gone=false;
+  let _t=null;
   function dismiss(){
-    if(_dismissed)return;
-    _dismissed=true;
-    if(_autoTimer)clearTimeout(_autoTimer);
+    if(_gone)return;_gone=true;
+    if(_t)clearTimeout(_t);
     window._battleSkipFn=null;
-    // Slide card down before calling done
-    ov.style.transition='opacity .2s ease, transform .2s ease';
+    if(fog)fog.classList.remove('active');
+    ov.style.transition='opacity .22s ease,transform .22s ease';
     ov.style.opacity='0';
-    ov.style.transform='translateX(-50%) translateY(20px)';
+    ov.style.transform='translateX(-50%) translateY(24px)';
     setTimeout(()=>{
       ov.style.display='none';
-      ov.style.transition='';
-      ov.style.opacity='';
-      ov.style.transform='';
-      done();
-    },200);
+      ov.style.transition='';ov.style.opacity='';ov.style.transform='';
+      onDismiss&&onDismiss();
+    },220);
   }
-
   window._battleSkipFn=dismiss;
   ov.onclick=dismiss;
-  // Auto-advance after 2.8s
-  _autoTimer=setTimeout(dismiss, 2800);
+  _t=setTimeout(dismiss,autoMs||3000);
+}
+
+function showBattleOverlay(fr, to, win, atkF, al, done){
+  _animZoomTo(fr, to, 0.38);
+
+  const resColor=win?'#90ff80':'#ff9080';
+  const resText=win?`✦ Victory — ${PROVINCES[to]&&PROVINCES[to].name} occupied!`:`✗ Repelled! Lost ${fa(al)}.`;
+  const defArmy=win?al:G.army[to]||0;
+
+  const html=`
+    <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(12px,2vw,16px);color:#c9a84c;letter-spacing:3px;text-align:center;margin-bottom:6px">⚔ Battle Report ⚔</div>
+    <div style="font-size:clamp(8px,1.2vw,10px);color:#4a3828;letter-spacing:2px;text-align:center;margin-bottom:12px">${(PROVINCES[fr]&&PROVINCES[fr].short)||'?'} → ${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
+    <div style="display:flex;gap:0;margin-bottom:12px">
+      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(30,70,20,.35);border:1px solid rgba(70,150,50,.4);border-right:none">
+        <div style="font-size:clamp(7px,1vw,9px);color:#80c860;letter-spacing:2px;margin-bottom:5px">ATTACKING</div>
+        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${(PROVINCES[fr]&&PROVINCES[fr].short)||'?'}</div>
+        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#a0e870;line-height:1">${fa(atkF)}</div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 clamp(12px,2vw,18px);font-family:'Cinzel Decorative',serif;font-size:clamp(20px,3.5vw,28px);color:#d43030">VS</div>
+      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(70,16,16,.35);border:1px solid rgba(150,40,40,.4);border-left:none">
+        <div style="font-size:clamp(7px,1vw,9px);color:#c85050;letter-spacing:2px;margin-bottom:5px">DEFENDING</div>
+        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
+        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#e87070;line-height:1">${fa(defArmy)}</div>
+      </div>
+    </div>
+    <div style="text-align:center;padding:clamp(10px,1.8vh,16px) 14px;border:1px solid ${win?'rgba(60,160,40,.5)':'rgba(160,40,40,.5)'};background:${win?'rgba(40,100,20,.22)':'rgba(100,20,20,.22)'};font-family:'Cinzel',serif;font-size:clamp(12px,2vw,15px);letter-spacing:1px;color:${resColor}">${resText}</div>
+    <div style="font-size:clamp(8px,1.1vw,10px);color:#2a2018;text-align:center;margin-top:8px;letter-spacing:1px">tap to continue</div>
+  `;
+
+  _showOverlayCard(html, ()=>{
+    done();
+  }, 3000);
+}
+
+function showEnemyAttackOverlay(ev, done){
+  const {fr, to, atker, send, win, al} = ev;
+  _animZoomTo(fr, to, 0.38);
+
+  // Approximate enemy force (fog of war)
+  const approxSend=approxForce(send);
+  const approxDef=approxForce(G.army[to]||0);
+
+  const resColor=win?'#ff8060':'#a0c880';
+  const resText=win
+    ?`☠ ${ownerName(atker)} seized ${(PROVINCES[to]&&PROVINCES[to].name)||'?'}!`
+    :`✦ ${(PROVINCES[to]&&PROVINCES[to].name)||'?'} repelled the attack!`;
+
+  const html=`
+    <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(11px,1.8vw,15px);color:#c06040;letter-spacing:3px;text-align:center;margin-bottom:6px">⚔ Enemy Attack ⚔</div>
+    <div style="font-size:clamp(8px,1.2vw,10px);color:#4a3020;letter-spacing:2px;text-align:center;margin-bottom:12px">${ownerName(atker)} → ${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
+    <div style="display:flex;gap:0;margin-bottom:12px">
+      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(70,16,16,.35);border:1px solid rgba(150,40,40,.4);border-right:none">
+        <div style="font-size:clamp(7px,1vw,9px);color:#c85050;letter-spacing:2px;margin-bottom:5px">ENEMY FORCE</div>
+        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${ownerName(atker)}</div>
+        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#e87070;line-height:1">~${fa(approxSend)}</div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 clamp(12px,2vw,18px);font-family:'Cinzel Decorative',serif;font-size:clamp(20px,3.5vw,28px);color:#c09040">VS</div>
+      <div style="flex:1;text-align:center;padding:clamp(8px,1.5vh,14px) clamp(8px,1.5vw,16px);background:rgba(20,50,20,.35);border:1px solid rgba(50,120,40,.4);border-left:none">
+        <div style="font-size:clamp(7px,1vw,9px);color:#80c860;letter-spacing:2px;margin-bottom:5px">YOUR FORCE</div>
+        <div style="font-size:clamp(9px,1.3vw,11px);color:#e8d5a3;margin-bottom:4px">${(PROVINCES[to]&&PROVINCES[to].name)||'?'}</div>
+        <div style="font-size:clamp(28px,5vw,40px);font-family:'Cinzel',serif;font-weight:700;color:#a0e870;line-height:1">${fa(approxDef)}</div>
+      </div>
+    </div>
+    <div style="text-align:center;padding:clamp(10px,1.8vh,16px) 14px;border:1px solid ${win?'rgba(160,40,40,.5)':'rgba(60,160,40,.5)'};background:${win?'rgba(100,20,20,.22)':'rgba(20,80,10,.22)'};font-family:'Cinzel',serif;font-size:clamp(12px,2vw,15px);letter-spacing:1px;color:${resColor}">${resText}</div>
+    <div style="font-size:clamp(8px,1.1vw,10px);color:#2a2018;text-align:center;margin-top:8px;letter-spacing:1px">tap to continue</div>
+  `;
+
+  _showOverlayCard(html, done, 3000);
 }
 
 function drawBattleMap(){ /* no-op — replaced by overlay */ }
@@ -2251,8 +2402,8 @@ function endTurn(){
     }
     G.satisfaction[r]=Math.max(5,Math.min(100,sat+satDelta));
 
-    // Revolt check — only extreme instability + low assimilation + very low satisfaction
-    const revoltChance=G.instab[r]>92&&G.assim[r]<20?0.12:G.satisfaction[r]<8?0.06:0;
+    // Revolt check — only at near-zero satisfaction (extremely rare)
+    const revoltChance=G.satisfaction[r]<2?0.08:0;
     if(Math.random()<revoltChance)triggerRevolt(r,io);
   });
 
@@ -2316,10 +2467,10 @@ function autoSave(){
 }
 
 function triggerRevolt(r,io){
-  const ra=Math.floor(ri(400,2200)*(io.revoltScale||1));
+  const ra=Math.floor(ri(200,800)*(io.revoltScale||1));
   G.owner[r]=-1;G.army[r]=ra;G.instab[r]=ri(20,45);G.assim[r]=ri(8,28);G.resistance[r]=0;
-  addLog(`⚡ REVOLT — ${PROVINCES[r].name} breaks free!`,'revolt');
-  popup(`⚡ Revolt in ${PROVINCES[r].name}!`,3200);
+  addLog(`🔥 Rebellion — ${PROVINCES[r].name} rises against you!`,'revolt');
+  popup(`🔥 Rebellion in ${PROVINCES[r].name}!`,3200);
 }
 
 function spreadDisease(){
@@ -2387,28 +2538,23 @@ function processEpidemics(fullMonth=false){
   const isWinter=s.name==='Winter';
   const isAutumn=s.name==='Autumn';
   const isSummer=s.name==='Summer';
-  // Seasonal outbreak multiplier
-  const seasonMult=isWinter?2.2:isAutumn?1.6:isSummer?1.3:1.0;
+  // Very mild seasonal multiplier
+  const seasonMult=isWinter?1.3:isAutumn?1.05:isSummer?1.05:1.0;
 
-  // ── Random new outbreaks — rare, only monthly roll ────────
-  // Only check on full month, not every week
-  if(!fullMonth) {
-    // Weekly: only process existing epidemics, no new ones
-  } else {
-    const atWar=G.war[G.playerNation]?.some(w=>w);
-    // Base: ~5% per year in peace, ~12% in war, boosted by season
-    const baseChance=(atWar?0.01:0.004)*seasonMult;
-    for(let roll=0;roll<2;roll++){
-      if(Math.random()<baseChance*(roll===0?1:0.2)){
-        const candidates=PROVINCES.map((_,i)=>i).filter(i=>!PROVINCES[i].isSea);
-        const origin=candidates[Math.floor(Math.random()*candidates.length)];
-        if(!G.epidemics?.find(ep=>ep.active&&ep.provinces.has(origin))){
-          let pool=DISEASE_TYPES;
-          if(isWinter) pool=DISEASE_TYPES.filter(d=>d.seasonal==='winter'||!d.seasonal).concat(DISEASE_TYPES.filter(d=>d.seasonal==='winter'));
-          if(isSummer||isAutumn) pool=DISEASE_TYPES.filter(d=>d.seasonal==='summer'||!d.seasonal).concat(DISEASE_TYPES.filter(d=>d.seasonal==='summer'));
-          const type=pool[Math.floor(Math.random()*pool.length)];
-          newEpidemic(origin, type);
-        }
+  // ── Random new outbreaks — very rare, monthly only ────────
+  if(fullMonth){
+    const atWar=G.war[G.playerNation]&&G.war[G.playerNation].some(w=>w);
+    // ~2% per year in peace, ~5% in war. Single roll per month.
+    const baseChance=(atWar?0.004:0.0015)*seasonMult;
+    if(Math.random()<baseChance){
+      const candidates=PROVINCES.map((_,i)=>i).filter(i=>!PROVINCES[i].isSea);
+      const origin=candidates[Math.floor(Math.random()*candidates.length)];
+      if(!G.epidemics||!G.epidemics.find(ep=>ep.active&&ep.provinces.has(origin))){
+        let pool=DISEASE_TYPES;
+        if(isWinter) pool=DISEASE_TYPES.filter(d=>d.seasonal==='winter'||!d.seasonal);
+        if(isSummer||isAutumn) pool=DISEASE_TYPES.filter(d=>d.seasonal==='summer'||!d.seasonal);
+        const type=pool[Math.floor(Math.random()*pool.length)];
+        newEpidemic(origin, type);
       }
     }
   }
@@ -2416,29 +2562,14 @@ function processEpidemics(fullMonth=false){
   // ── Process each active epidemic ─────────────────────────
   for(const ep of G.epidemics){
     if(!ep.active) continue;
-    if(fullMonth) ep.turnsActive++; // count months, not weeks
-
-    // ── Possible mutation: become more aggressive ─────────
-    if(fullMonth && ep.turnsActive>3&&Math.random()<0.15){
-      const mutTypes=['spreadRate','lethality'];
-      const stat=mutTypes[Math.floor(Math.random()*mutTypes.length)];
-      const boost=stat==='spreadRate'?ri(5,15)/100:ri(2,6)/100;
-      ep.type={...ep.type,[stat]:Math.min(0.95,ep.type[stat]+boost)};
-      if(ep.dead>100000||ep.provinces.size>20){
-        addLog(`${ep.icon} ${ep.name} mutates — becomes more ${stat==='spreadRate'?'contagious':'lethal'}!`,'revolt');
-      }
-    }
-
-    // Seasonal spread boost
-    const spreadBoost=isWinter?(ep.type.seasonal==='winter'?1.8:1.3):isAutumn?1.4:isSummer?(ep.type.seasonal==='summer'?1.6:1.1):1.0;
+    if(fullMonth) ep.turnsActive++;
 
     const provList=[...ep.provinces];
 
     for(const prov of provList){
-      // ── Persistence roulette (weekly, so divide monthly chance by 4) ──
-      const hospBonus=(G.buildings[prov]||[]).includes('hospital')?0.25:0;
-      const instabPenalty=Math.min(0.08,(G.instab[prov]||0)/1000);
-      const eliminateChance=Math.max(0.02,(0.15+hospBonus-instabPenalty)/4); // higher base elimination
+      // ── Fast elimination: 28-48% per week → clears in 2-4 weeks ──
+      const hospBonus=(G.buildings[prov]||[]).includes('hospital')?0.20:0;
+      const eliminateChance=Math.min(0.55, 0.28+hospBonus);
       if(Math.random()<eliminateChance){
         ep.provinces.delete(prov);
         G.provDisease[prov]=null;
@@ -2446,102 +2577,57 @@ function processEpidemics(fullMonth=false){
         continue;
       }
 
-      // ── Effects ───────────────────────────────────────
+      // ── Mild effects ──────────────────────────────────
       const pop=G.pop[prov];
-      if(pop>1000){
-        const roll=Math.random();
-        let deathRate;
-        if(roll<0.55)      deathRate=ep.type.lethality*0.15; // small
-        else if(roll<0.85) deathRate=ep.type.lethality*0.55; // medium
-        else               deathRate=ep.type.lethality*1.8;  // severe
-        const dead=Math.floor(pop*deathRate);
-        if(dead>0){
-          G.pop[prov]=Math.max(500,pop-dead);
-          ep.dead+=dead;
-          // Log big death events
-          if(dead>50000&&G.owner[prov]===G.playerNation){
-            addLog(`${ep.icon} ${ep.name}: ${fm(dead)} deaths in ${PROVINCES[prov]?.name}!`,'revolt');
-          }
-        }
-        G.disease[prov]=Math.min(100,35+Math.floor(ep.type.lethality*500));
+      if(pop>500){
+        const dead=Math.floor(pop*ep.type.lethality*0.04*(Math.random()<0.1?4:1));
+        if(dead>0){G.pop[prov]=Math.max(500,pop-dead);ep.dead+=dead;}
+        G.disease[prov]=Math.min(100,15+Math.floor(ep.type.lethality*150));
       }
-
       if(G.satisfaction[prov]!==undefined){
-        G.satisfaction[prov]=Math.max(5,(G.satisfaction[prov]||70)-ri(1,Math.ceil(ep.type.satHit/2)));
+        G.satisfaction[prov]=Math.max(5,(G.satisfaction[prov]||70)-ri(0,Math.ceil(ep.type.satHit/10)));
       }
-      G.instab[prov]=Math.min(100,(G.instab[prov]||0)+ri(2,6));
+      G.instab[prov]=Math.min(100,(G.instab[prov]||0)+ri(0,2));
 
-      // ── Spread ────────────────────────────────────────
-      const owner=G.owner[prov];
-      const provIdx=PROVINCES.findIndex((_,idx)=>idx===prov);
-      const neighbors=NB[prov]||[];
-
-      for(const nb of neighbors){
-        if(ep.provinces.has(nb)||PROVINCES[nb]?.isSea) continue;
+      // ── Neighbor spread — very rare, one neighbor at a time ──
+      const neighbors=(NB[prov]||[]).filter(nb=>!ep.provinces.has(nb)&&!PROVINCES[nb]?.isSea);
+      if(neighbors.length>0&&Math.random()<0.12){ // 12% chance to even attempt spread this tick
+        const nb=neighbors[Math.floor(Math.random()*neighbors.length)];
         const nbOwner=G.owner[nb];
-        const sameNation=owner>=0&&nbOwner===owner;
-        const nbHosp=(G.buildings[nb]||[]).includes('hospital')?0.45:1.0;
-        // Reduced spread rate across the board
-        const baseSpread=ep.type.spreadRate*(sameNation?0.45:0.18)*nbHosp*spreadBoost;
+        const sameNation=G.owner[prov]>=0&&nbOwner===G.owner[prov];
+        const nbHosp=(G.buildings[nb]||[]).includes('hospital')?0.25:1.0;
+        const baseSpread=ep.type.spreadRate*0.05*(sameNation?1.1:0.5)*nbHosp*seasonMult;
         if(Math.random()<baseSpread){
           ep.provinces.add(nb);
           G.provDisease[nb]=ep.id;
-          G.disease[nb]=25+ri(0,25);
-          // Only log spread into PLAYER's own province (not from player's to neighbor)
+          G.disease[nb]=8+ri(0,12);
           if(nbOwner===G.playerNation){
-            addLog(`${ep.icon} ${ep.name} spreads to ${PROVINCES[nb]?.name||'?'}!`,'revolt');
-          }
-        }
-
-        // Long-distance jump — reduced to 0.5% base
-        const jumpChance=0.005*spreadBoost;
-        if(!ep.provinces.has(nb)&&Math.random()<jumpChance){
-          ep.provinces.add(nb);
-          G.provDisease[nb]=ep.id;
-          G.disease[nb]=15+ri(0,20);
-          if(nbOwner===G.playerNation){
-            addLog(`${ep.icon} ${ep.name} jumps to ${PROVINCES[nb]?.name||'?'}!`,'revolt');
+            addLog(`${ep.icon} ${ep.name} spreads to ${PROVINCES[nb]&&PROVINCES[nb].name||'?'}!`,'revolt');
           }
         }
       }
-
-      // Extra: random long-range jump (ships, caravans) — reduced to 0.2% per infected province
-      if(Math.random()<0.002*spreadBoost){
-        const allLand=PROVINCES.map((_,i)=>i).filter(i=>!PROVINCES[i].isSea&&!ep.provinces.has(i));
-        if(allLand.length){
-          const target=allLand[Math.floor(Math.random()*allLand.length)];
-          ep.provinces.add(target);
-          G.provDisease[target]=ep.id;
-          G.disease[target]=20+ri(0,20);
-          if(G.owner[target]===G.playerNation){
-            addLog(`${ep.icon} ${ep.name} appears in ${PROVINCES[target]?.name} — unknown origin!`,'revolt');
-            popup(`⚠ ${ep.icon} ${ep.name} in ${PROVINCES[target]?.name}!`,3500);
-          }
-        }
-      }
+      // No long-range jumps
     }
 
-    // ── Natural end (check monthly) ───────────────────────
+    // ── Natural end ───────────────────────────────────────
     if(fullMonth&&(ep.turnsActive>=ep.totalDuration||ep.provinces.size===0)){
       ep.active=false;
       for(const p of ep.provinces){G.provDisease[p]=null;G.disease[p]=0;}
       ep.provinces.clear();
       if(ep.dead>0){
         addLog(`${ep.icon} ${ep.name} epidemic ended. ☠ ${fm(ep.dead)} total deaths.`,'event');
-        if(ep.dead>100000) popup(`${ep.icon} ${ep.name} has ended — ☠ ${fm(ep.dead)} lives lost`,4500);
       }
     }
   }
 
   if(G.epidemics.length>30) G.epidemics=G.epidemics.slice(-30);
 
-  // ── Monthly: warn player about large ally epidemics (>5 provinces) ──
+  // ── Monthly: warn about large ally epidemics (>5 provinces) ──
   if(fullMonth){
     if(!G._allyEpicNotified) G._allyEpicNotified=new Set();
     for(const ep of G.epidemics){
       if(!ep.active||ep.provinces.size<=5) continue;
       if(G._allyEpicNotified.has(ep.id)) continue;
-      // Check if epidemic is mostly in ally territory
       let allyCount=0;
       for(const p of ep.provinces){
         const o=G.owner[p];
@@ -2552,7 +2638,6 @@ function processEpidemics(fullMonth=false){
         addLog(`${ep.icon} Major ${ep.name} outbreak among allies (${ep.provinces.size} provinces affected)!`,'revolt');
       }
     }
-    // Clean up notified set for inactive epidemics
     for(const id of [...G._allyEpicNotified]){
       if(!G.epidemics.find(ep=>ep.active&&ep.id===id)) G._allyEpicNotified.delete(id);
     }
@@ -2634,12 +2719,21 @@ function doAI(){
           G.army[fr2]-=send;G.army[to2]=Math.max(50,send-al);G.owner[to2]=ai;
           G.instab[to2]=ri(30,60);G.assim[to2]=ri(5,20);
           if((G.buildings[to2]||[]).includes('fortress'))G.buildings[to2]=G.buildings[to2].filter(b=>b!=='fortress');
-          if(def3===G.playerNation)addLog(`⚔ ${ownerName(ai)} seized ${PROVINCES[to2].name}!`,'war');
+          if(def3===G.playerNation){
+            addLog(`⚔ ${ownerName(ai)} seized ${PROVINCES[to2].name}!`,'war');
+            // Queue enemy attack notification for overlay
+            if(!G._enemyAttackQueue)G._enemyAttackQueue=[];
+            G._enemyAttackQueue.push({fr:fr2,to:to2,atker:ai,send,win:true,al});
+          }
           if(def3>=0&&regsOf(def3).length===0)G.war[ai][def3]=G.war[def3][ai]=false;
           if(PROVINCES[to2].isCapital&&def3>=0)G.capitalPenalty[ai]=3;
         }else{
           G.army[fr2]=Math.max(0,G.army[fr2]-Math.floor(send*rf(.1,.28)));
           G.army[to2]=Math.max(50,G.army[to2]-Math.floor(G.army[to2]*rf(.08,.25)));
+          if(def3===G.playerNation&&Math.random()<0.4){ // only show 40% of failed attacks
+            if(!G._enemyAttackQueue)G._enemyAttackQueue=[];
+            G._enemyAttackQueue.push({fr:fr2,to:to2,atker:ai,send,win:false,al:0});
+          }
         }
       }
     }
