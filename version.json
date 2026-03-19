@@ -6,6 +6,6 @@
     "PATCH — bugfixes, UI tweaks, balance changes",
     "YYMMDD — build date"
   ],
-  "version": "0.8.2-260319",
-  "changelog": "draft number on map = plain #72F372 text matching army style; draft button frozen while province drafting; ACTIVE DRAFTS panel removed; double-draft guard in confirmDraft"
+  "version": "0.8.4-260319",
+  "changelog": "assimilation UI: single shared duration slider (1-48w) + 3 type cards with live price update; click card to confirm"
 }

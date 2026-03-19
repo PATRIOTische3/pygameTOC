@@ -178,6 +178,7 @@ function startGame(){
   G._enemyAttackQueue=[];
   G.moveQueue=[]; // queued troop movements: [{from,to,amount}]
   G.draftQueue=[]; // queued conscriptions: [{prov,amount,weeksLeft,nation}] // 0 = neutral, negative = angry about taxes
+  G.assimQueue=PROVINCES.map(()=>null); // per-province assimilation: {type,weeksLeft,popFloor} or null
   G.resBase=PROVINCES.map(p=>({...((p.res)||{})}));
   G.resPool={oil:0,coal:0,grain:0,steel:0};
   G.loans=[];G.totalDebt=0;
@@ -784,10 +785,22 @@ function showProvPopup(i, screenX, screenY){
   if(isEnemy||isIndep){
     btns.push({icon:'⚔',lbl:'Attack',cls:'red',disabled:!canAtk,onclick:`hideProvPopup();G.sel=${i};chkBtns();openAttack()`});
   }
-  if(isOurs&&canMove){
+  if(isOurs&&canMove&&G.mapMode!=='instab'){
     btns.push({icon:'🚶',lbl:'Move',cls:'grn',onclick:`hideProvPopup();G.sel=${i};toggleMoveMode()`});
   }
-  if(isOurs){
+  if(isOurs&&G.mapMode==='instab'){
+    // In Unrest mode: show Assimilate instead of Build/Draft
+    const instabVal=G.instab[i]||0;
+    const hasAssim=G.assimQueue&&G.assimQueue[i];
+    const canAssim=instabVal>25;
+    if(hasAssim){
+      btns.push({icon:'🔄',lbl:'Assimilating…',cls:'',disabled:true,onclick:''});
+    } else if(canAssim){
+      btns.push({icon:'🏛',lbl:'Assimilate',cls:'',onclick:`hideProvPopup();G.sel=${i};openAssim(${i})`});
+    } else {
+      btns.push({icon:'✅',lbl:'Stable',cls:'',disabled:true,onclick:''});
+    }
+  } else if(isOurs&&G.mapMode!=='instab'){
     btns.push({icon:'🏗',lbl:'Build',cls:'',onclick:`hideProvPopup();G.sel=${i};openBuild()`});
     const _hasDraft=(G.draftQueue||[]).some(d=>d.prov===i&&d.nation===G.playerNation);
     btns.push({icon:'🪖',lbl:_hasDraft?'Drafting…':'Draft',cls:'',disabled:_hasDraft,onclick:_hasDraft?'':(`hideProvPopup();G.sel=${i};openDraft()`)});
@@ -1491,6 +1504,146 @@ function processDraftQueue(){
 }
 
 
+// ── ASSIMILATION ──────────────────────────────────────────
+// ── ASSIMILATION ──────────────────────────────────────────
+// Rate: instab reduction per week
+// Pop loss: total % of pop lost over full 48 weeks (random within range each week)
+// Cost formula: paid upfront for chosen N weeks; early weeks more expensive
+//   weekCost(w, N) = baseRate * (1 + (N - w) / N * 1.8)  — first weeks ~2.8x last
+// Gentle: cheapest; Standard: most expensive total; Harsh ≈ Standard but brutal pop loss
+const ASSIM_DEFS = {
+  gentle:   {
+    label:'🕊 Gentle', icon:'🕊',
+    instabRate: 2,          // −2% instab/week
+    popLossMin: 0.0,        // total pop loss % range (per 48 weeks)
+    popLossMax: 0.015,
+    baseRate: 6,            // gold/week base (first week ~16g, last ~6g)
+    desc:'Slow & humane. Minimal population impact.'
+  },
+  standard: {
+    label:'⚖ Standard', icon:'⚖',
+    instabRate: 2.5,        // −2.5%/week
+    popLossMin: 0.01,
+    popLossMax: 0.05,
+    baseRate: 14,           // most expensive total
+    desc:'Balanced. Noticeable but manageable pop decline.'
+  },
+  harsh: {
+    label:'☠ Harsh', icon:'☠',
+    instabRate: null,       // variable: n1=10, n2=9.5, n3=8, n4=6.5, n5+=5
+    popLossMin: 0.05,
+    popLossMax: 0.30,
+    baseRate: 12,           // ≈ standard total, front-loaded
+    desc:'Rapid but brutal. Heavy initial pop losses.'
+  },
+};
+
+// Harsh instab rate per week (decelerating)
+function harshRate(weekIdx){ // weekIdx 0-based
+  if(weekIdx===0) return 10;
+  if(weekIdx===1) return 9.5;
+  if(weekIdx===2) return 8;
+  if(weekIdx===3) return 6.5;
+  return 5;
+}
+
+// Upfront cost for N weeks of type
+function assimTotalCost(type, weeks){
+  const def=ASSIM_DEFS[type]; if(!def) return 0;
+  let total=0;
+  for(let w=0;w<weeks;w++){
+    // Cost decreases: first week = base*(1+1.8), last = base*1.0
+    const factor = 1 + (1 - w/Math.max(1,weeks-1)) * 1.8;
+    total += Math.round(def.baseRate * factor);
+  }
+  return total;
+}
+
+function openAssim(i){
+  if(i===undefined||i<0)i=G.sel;
+  if(i<0||G.owner[i]!==G.playerNation){popup('Select your territory!');return;}
+  const instabVal=Math.round(G.instab[i]||0);
+  if(instabVal<=25){popup('Province already stable (instability ≤ 25%).');return;}
+  if(G.assimQueue&&G.assimQueue[i]){
+    const aq=G.assimQueue[i];
+    const def=ASSIM_DEFS[aq.type];
+    openMo('🏛 ASSIMILATION IN PROGRESS',
+      `<p class="mx"><b>${PROVINCES[i].name}</b> · ${def?.label||''}</p>
+       <p class="mx">Instability: <b style="color:#c9a84c">${instabVal}%</b> · Weeks remaining: <b>${aq.weeksLeft}</b></p>
+       <p class="mx" style="color:#ff8844;font-size:9px">Cancel to stop (no refund).</p>`,
+      [{lbl:'Keep running',cls:'grn'},{lbl:'Cancel assimilation',cls:'red',cb:()=>{G.assimQueue[i]=null;addLog(`🏛 ${PROVINCES[i].short}: assimilation cancelled.`,'info');scheduleDraw();}}]
+    );
+    return;
+  }
+
+  const p=PROVINCES[i];
+  const isConquered=p.nation!==G.playerNation;
+  const gold=G.gold[G.playerNation];
+  const initWeeks=24;
+  window._assimProv=i;
+
+  // Three type cards — prices update via slider
+  function typeCards(weeks){
+    return Object.entries(ASSIM_DEFS).map(([key,def])=>{
+      const cost=assimTotalCost(key,weeks);
+      const canAfford=gold>=cost;
+      const col=key==='harsh'?'#ff7060':key==='standard'?'#c9a84c':'#80c080';
+      const estDrop=key==='harsh'
+        ?[10,9.5,8,6.5,...Array(44).fill(5)].slice(0,weeks).reduce((a,b)=>a+b,0)
+        :def.instabRate*weeks;
+      const instabAfter=Math.max(0,instabVal-estDrop).toFixed(0);
+      const popMin=Math.round(def.popLossMin*100);
+      const popMax=Math.round(def.popLossMax*100);
+      return`<div id="assim_card_${key}" style="flex:1;background:rgba(0,0,0,.3);border:1px solid ${canAfford?col:'#333'};padding:9px 8px;text-align:center;${canAfford?'cursor:pointer':'opacity:.45;cursor:not-allowed'}"
+        ${canAfford?`onclick="startAssim(${i},'${key}',document.getElementById('assim-weeks-sl').value|0)"`:''}>
+        <div style="font-family:Cinzel,serif;font-size:11px;color:${col};margin-bottom:4px">${def.label}</div>
+        <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${def.desc}</div>
+        <div style="font-size:8px;color:#c0c040;margin-bottom:2px">→ ${instabAfter}% instab</div>
+        <div style="font-size:8px;color:#ff8844;margin-bottom:6px">pop −${popMin===0?'<1':'~'+popMin}–${popMax}%</div>
+        <div style="font-family:Cinzel,serif;font-size:15px;color:${canAfford?col:'#ff4040'}" id="ac_${key}">${fa(cost)}g</div>
+      </div>`;
+    }).join('');
+  }
+
+  openMo('🏛 ASSIMILATION',
+    `<p class="mx"><b>${p.name}${p.isCapital?' ★':''}</b>${isConquered?' · <span style="color:#ff8844">Foreign province</span>':''}</p>
+     <p class="mx">Instability: <b style="color:${instabVal>60?'#ff6040':instabVal>40?'#e08030':'#c0c040'}">${instabVal}%</b> · Pop: <b>${fm(G.pop[i])}</b> · Treasury: <b>${fa(gold)}g</b></p>
+     <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(0,0,0,.25);border:1px solid var(--border2);margin-bottom:10px">
+       <span style="font-size:9px;color:var(--dim);flex-shrink:0">Duration</span>
+       <input type="range" id="assim-weeks-sl" min="1" max="48" value="${initWeeks}" style="flex:1"
+         oninput="(function(w){
+           document.getElementById('assim-weeks-val').textContent=w+'w';
+           Object.keys(ASSIM_DEFS).forEach(function(k){
+             var el=document.getElementById('ac_'+k);
+             if(el)el.textContent=fa(assimTotalCost(k,w))+'g';
+           });
+         })(+this.value)">
+       <span style="font-family:Cinzel,serif;font-size:14px;color:var(--gold);min-width:34px;text-align:right" id="assim-weeks-val">${initWeeks}w</span>
+     </div>
+     <p class="mx" style="font-size:9px;color:var(--dim);margin-bottom:8px">Cost paid upfront. Early weeks cost more. Click a method to confirm.</p>
+     <div style="display:flex;gap:6px">${typeCards(initWeeks)}</div>`,
+    [{lbl:'Cancel',cls:'dim'}]
+  );
+}
+
+window.startAssim=function(i,type,weeks){
+  closeMo();
+  if(!G.assimQueue)G.assimQueue=PROVINCES.map(()=>null);
+  const def=ASSIM_DEFS[type];if(!def)return;
+  weeks=Math.max(1,Math.min(48,weeks||24));
+  const cost=assimTotalCost(type,weeks);
+  if(G.gold[G.playerNation]<cost){popup('Insufficient gold!');return;}
+  G.gold[G.playerNation]-=cost;
+  const popFloor=Math.floor(G.pop[i]*0.28);
+  G.assimQueue[i]={type,weeksLeft:weeks,totalWeeks:weeks,popFloor,weekIdx:0};
+  addLog(`🏛 ${PROVINCES[i].short}: ${def.label} assimilation (${weeks}w, ${fa(cost)}g).`,'info');
+  popup(`🏛 Assimilation started — ${fa(cost)}g paid upfront`);
+  scheduleDraw();updateHUD();if(G.sel>=0)updateSP(G.sel);
+};
+
+// processAssimCosts is now a no-op (cost paid upfront)
+function processAssimCosts(){ /* paid upfront */ }
+
 // ── ECONOMY ───────────────────────────────────────────────
 // Max tax rate per ideology
 const TAX_MAX={
@@ -2141,8 +2294,11 @@ function runBattle(fr,to,atkF,atker,done){
       const prev=G.owner[to];G.owner[to]=atker;G.gold[atker]+=G.income[to]*3;
       if(atker===G.playerNation){
         const io3=ideol();
-        G.instab[to]=Math.min(100,ri(50,75)+(io3.extraConqInstab||0));
+        G.instab[to]=ri(82,95); // very high instability on conquest
+        G.satisfaction[to]=ri(8,18); // very low satisfaction
         G.assim[to]=ri(5,22);
+        if(!G.assimQueue)G.assimQueue=PROVINCES.map(()=>null);
+        G.assimQueue[to]=null; // clear any previous assimilation
         if(hasFort)G.buildings[to]=G.buildings[to].filter(b=>b!=='fortress');
         if(PROVINCES[to].isCapital&&prev>=0){G.capitalPenalty[atker]=3;addLog(`★ ${PROVINCES[to].name} captured!`,'war');}
         G.resistance[to]=ri(20,50);
@@ -2569,6 +2725,7 @@ function endTurn(){
   // Execute queued moves (instant, no animation needed)
   executeMoveQueue();
   processDraftQueue(); // advance draft timers every week
+  processAssimCosts(); // deduct assimilation gold cost weekly
 
   if(!newMonth){
     doAI(false); // weekly — attacks, retreats only
@@ -2638,14 +2795,59 @@ function endTurn(){
     if((G.buildings[r]||[]).includes('granary'))pgr*=1.15;
     G.pop[r]+=Math.floor(pgr);
 
-    // Assimilation
-    if(G.assim[r]<100)G.assim[r]=Math.min(100,G.assim[r]+ri(2,6)*(io.assimSpeed||1));
+    // Assimilation passive (old assim field — kept for compat display)
+    if(G.assim[r]<100)G.assim[r]=Math.min(100,G.assim[r]+ri(1,3)*(io.assimSpeed||1));
 
-    // Instability decay
-    let dec=ri(2,7)*(io.instabDecay||1);
-    if((G.buildings[r]||[]).includes('fortress'))dec+=5;
-    if((G.buildings[r]||[]).includes('palace'))dec+=6;
-    G.instab[r]=Math.max(0,G.instab[r]-dec);
+    // ── Instability decay (new system) ─────────────────────
+    // Natural decay is very slow and stops at 25% floor (foreign province barrier)
+    // Phase 1: 100→50: −0.25/week  Phase 2: 50→25: −0.5/week
+    const instab=G.instab[r]||0;
+    const isConquered = PROVINCES[r].nation !== G.playerNation; // foreign province
+    const instabFloor = isConquered ? 25 : 0;
+    let instabDec = 0;
+    if(instab > 50) instabDec = 0.25;
+    else if(instab > 25) instabDec = 0.5;
+    else if(!isConquered) instabDec = ri(1,3)*(io.instabDecay||1); // own historical: normal decay below 25
+    // Buildings still help on own provinces
+    if(!isConquered){
+      if((G.buildings[r]||[]).includes('fortress'))instabDec+=5;
+      if((G.buildings[r]||[]).includes('palace'))instabDec+=6;
+    }
+    G.instab[r]=Math.max(instabFloor, instab - instabDec);
+
+    // Active assimilation processing (weekly)
+    const aq = G.assimQueue&&G.assimQueue[r];
+    if(aq){
+      const def=ASSIM_DEFS[aq.type];
+      if(def){
+        // Instab reduction this week
+        let instabDrop;
+        if(aq.type==='harsh'){
+          instabDrop=harshRate(aq.weekIdx||0);
+        } else {
+          instabDrop=def.instabRate;
+        }
+        G.instab[r]=Math.max(0, G.instab[r]-instabDrop);
+
+        // Pop loss this week — random within type's range, distributed over 48w
+        const weeklyLossMin=def.popLossMin/48;
+        const weeklyLossMax=def.popLossMax/48;
+        const weeklyLoss=weeklyLossMin+(weeklyLossMax-weeklyLossMin)*Math.random();
+        const popLoss=Math.floor(G.pop[r]*weeklyLoss);
+        G.pop[r]=Math.max(aq.popFloor||Math.floor(G.pop[r]*0.28), G.pop[r]-popLoss);
+
+        aq.weekIdx=(aq.weekIdx||0)+1;
+        aq.weeksLeft--;
+
+        // End conditions
+        if(aq.weeksLeft<=0||G.instab[r]<=0||G.owner[r]!==G.playerNation){
+          G.assimQueue[r]=null;
+          if(G.owner[r]===G.playerNation){
+            addLog(`✅ ${PROVINCES[r].short}: assimilation complete. Instab ${Math.round(G.instab[r])}%.`,'info');
+          }
+        }
+      }
+    }
 
     // Supply penalty
     if(G.pop[r]/10<G.army[r])G.instab[r]=Math.min(100,G.instab[r]+ri(2,5));
