@@ -6,6 +6,6 @@
     "PATCH \u2014 bugfixes, UI tweaks, balance changes",
     "YYMMDD \u2014 build date"
   ],
-  "version": "0.8.0-260318",
-  "changelog": "AI weekly attacks+smart buildings+personality, draft queue, disease++, MP v4.3, session resume banner"
+  "version": "0.8.1-260319",
+  "changelog": "Buildings map mode, draft queue, MP reconnect, move arrow fix, session banner, UI block on opponent turn"
 }
