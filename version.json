@@ -6,6 +6,6 @@
     "PATCH \u2014 bugfixes, UI tweaks, balance changes",
     "YYMMDD \u2014 build date"
   ],
-  "version": "0.8.2-260319",
-  "changelog": "MP nation list fix, invite link fix, session banners, reconnect"
+  "version": "0.8.3-260319",
+  "changelog": "CRITICAL: fixed syntax error in session restore that broke entire game"
 }

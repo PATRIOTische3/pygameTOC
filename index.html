@@ -1297,53 +1297,58 @@ function _applyLiveState(state){
   if(!G.draftQueue)G.draftQueue=[];
 }
 
+// Helper functions referenced by banner buttons
+function _mpDiscard(){ localStorage.removeItem('toc_mp_session'); var b=document.getElementById('mp-reconnect-banner'); if(b)b.remove(); }
+function _mpReconnect(){ var d=localStorage.getItem('toc_mp_session'); if(!d)return; var s=JSON.parse(d); localStorage.removeItem('toc_mp_session'); var b=document.getElementById('mp-reconnect-banner'); if(b)b.remove(); MP.joinRoom(s.roomId); }
+function _spDiscard(){ localStorage.removeItem('toc_live'); var b=document.getElementById('resume-banner'); if(b)b.remove(); }
+function _spResume(){ var d=localStorage.getItem('toc_live'); if(!d)return; _applyLiveState(JSON.parse(d)); show('game'); setTimeout(function(){ computeHexRadius();buildCanvas();zoomReset();updateHUD();updateIdeoHUD();updateSeasonUI();addLog('\u21BA Session restored.','event'); },80); var b=document.getElementById('resume-banner'); if(b)b.remove(); }
+
 (function(){
   try{
-    // Check for MP session first
-    const mpRaw=localStorage.getItem('toc_mp_session');
+    var mpRaw=localStorage.getItem('toc_mp_session');
     if(mpRaw){
-      const mps=JSON.parse(mpRaw);
+      var mps=JSON.parse(mpRaw);
       if(mps&&mps.roomId&&mps.nation>=0){
-        setTimeout(()=>{
+        setTimeout(function(){
           show('mp');
-          const inp=document.getElementById('mp-join-code')||document.getElementById('mp-join-id');
+          var inp=document.getElementById('mp-join-code')||document.getElementById('mp-join-id');
           if(inp)inp.value=mps.roomId;
-          const banner=document.createElement('div');
-          banner.style.cssText='position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:20;background:linear-gradient(160deg,#1e1208,#0c0804);border:1px solid rgba(201,168,76,.4);padding:12px 20px;text-align:center;font-family:Cinzel,serif;white-space:nowrap';
-          const nm=window.NATIONS&&NATIONS[mps.nation]?NATIONS[mps.nation].name:'?';
-          banner.innerHTML='<div style="font-size:10px;color:var(--dim);margin-bottom:6px">MP SESSION FOUND</div>'
-            +'<div style="font-size:12px;color:var(--gold);margin-bottom:10px">'+nm+' · Room '+mps.roomId+'</div>'
-            +'<div style="display:flex;gap:8px">'
-            +'<button onclick="localStorage.removeItem('toc_mp_session');this.closest('div[style]').remove()" style="padding:5px 12px;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--dim);font-family:Cinzel,serif;font-size:9px;cursor:pointer">DISCARD</button>'
-            +'<button onclick="MP.joinRoom(''+mps.roomId+'');localStorage.removeItem('toc_mp_session')" style="padding:5px 12px;background:rgba(201,168,76,.12);border:1px solid var(--gold);color:var(--gold);font-family:Cinzel,serif;font-size:9px;cursor:pointer">↩ RECONNECT</button>'
+          var nm=(window.NATIONS&&NATIONS[mps.nation])?NATIONS[mps.nation].name:'?';
+          var banner=document.createElement('div');
+          banner.id='mp-reconnect-banner';
+          banner.style.cssText='position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:20;background:linear-gradient(160deg,#1e1208,#0c0804);border:1px solid rgba(201,168,76,.4);padding:12px 20px;text-align:center;font-family:Cinzel,serif;min-width:220px';
+          banner.innerHTML='<div style="font-size:9px;color:#8a7848;margin-bottom:6px;letter-spacing:2px">MP SESSION FOUND</div>'
+            +'<div style="font-size:12px;color:#c9a84c;margin-bottom:10px">'+nm+' &middot; Room '+mps.roomId+'</div>'
+            +'<div style="display:flex;gap:8px;justify-content:center">'
+            +'<button onclick="_mpDiscard()" style="padding:5px 12px;background:rgba(0,0,0,.3);border:1px solid #2a2418;color:#8a7848;font-family:Cinzel,serif;font-size:9px;cursor:pointer;letter-spacing:1px">DISCARD</button>'
+            +'<button onclick="_mpReconnect()" style="padding:5px 12px;background:rgba(201,168,76,.12);border:1px solid #c9a84c;color:#c9a84c;font-family:Cinzel,serif;font-size:9px;cursor:pointer;letter-spacing:1px">&#8629; REJOIN</button>'
             +'</div>';
-          const mp=document.getElementById('s-mp');
+          var mp=document.getElementById('s-mp');
           if(mp)mp.appendChild(banner);
         },300);
         return;
       }
     }
-    // Singleplayer live save
-    const raw=localStorage.getItem('toc_live');
+    var raw=localStorage.getItem('toc_live');
     if(!raw)return;
-    const state=JSON.parse(raw);
+    var state=JSON.parse(raw);
     if(!state||state.playerNation==null)return;
-    const mn=state.playerNation;
-    const nat=window.NATIONS&&NATIONS[mn];
-    const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const dateStr=mo[state.month||0]+' '+(state.year||1936);
-    setTimeout(()=>{
-      const intro=document.getElementById('s-intro');
+    var mn=state.playerNation;
+    var nat=(window.NATIONS&&NATIONS[mn])?NATIONS[mn]:null;
+    var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var dateStr=mo[state.month||0]+' '+(state.year||1936);
+    setTimeout(function(){
+      var intro=document.getElementById('s-intro');
       if(!intro||!intro.classList.contains('on'))return;
-      const b=document.createElement('div');
+      var b=document.createElement('div');
       b.id='resume-banner';
       b.style.cssText='position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:10;background:linear-gradient(160deg,#1e1208,#0c0804);border:1px solid rgba(201,168,76,.4);padding:16px 24px;text-align:center;min-width:240px;font-family:Cinzel,serif';
-      b.innerHTML='<div style="font-size:9px;color:var(--dim);letter-spacing:2px;margin-bottom:6px">UNSAVED SESSION</div>'
-        +'<div style="font-size:13px;color:var(--gold);margin-bottom:2px">'+(nat?nat.name:'?')+'</div>'
-        +'<div style="font-size:10px;color:var(--dim);margin-bottom:12px">'+dateStr+'</div>'
+      b.innerHTML='<div style="font-size:9px;color:#8a7848;letter-spacing:2px;margin-bottom:6px">UNSAVED SESSION</div>'
+        +'<div style="font-size:13px;color:#c9a84c;margin-bottom:2px">'+(nat?nat.name:'?')+'</div>'
+        +'<div style="font-size:10px;color:#8a7848;margin-bottom:12px">'+dateStr+'</div>'
         +'<div style="display:flex;gap:8px;justify-content:center">'
-        +'<button onclick="localStorage.removeItem('toc_live');document.getElementById('resume-banner').remove()" style="padding:6px 14px;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--dim);font-family:Cinzel,serif;font-size:9px;cursor:pointer;letter-spacing:1px">DISCARD</button>'
-        +'<button onclick="_applyLiveState(JSON.parse(localStorage.getItem('toc_live')));show('game');setTimeout(()=>{computeHexRadius();buildCanvas();zoomReset();updateHUD();updateIdeoHUD();updateSeasonUI();addLog('↺ Session restored.','event');},80);document.getElementById('resume-banner').remove()" style="padding:6px 14px;background:rgba(201,168,76,.12);border:1px solid var(--gold);color:var(--gold);font-family:Cinzel,serif;font-size:9px;cursor:pointer;letter-spacing:1px">▶ RESUME</button>'
+        +'<button onclick="_spDiscard()" style="padding:6px 14px;background:rgba(0,0,0,.3);border:1px solid #2a2418;color:#8a7848;font-family:Cinzel,serif;font-size:9px;cursor:pointer;letter-spacing:1px">DISCARD</button>'
+        +'<button onclick="_spResume()" style="padding:6px 14px;background:rgba(201,168,76,.12);border:1px solid #c9a84c;color:#c9a84c;font-family:Cinzel,serif;font-size:9px;cursor:pointer;letter-spacing:1px">&#9654; RESUME</button>'
         +'</div>';
       intro.appendChild(b);
     },400);
