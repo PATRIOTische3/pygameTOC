@@ -412,11 +412,13 @@ function newSeaZone(fromHexIdx){
 
 function renderZoneList(){
   const el=document.getElementById('zone-list');if(!el)return;
-  if(!P||!P.seaZones||!P.seaZones.length){el.innerHTML='<div style="font-size:9px;color:var(--dim);font-style:italic;padding:8px 0;text-align:center">No sea zones yet.<br>Click a sea hex to create.</div>';return;}
-  el.innerHTML=P.seaZones.map(z=>`<div class="li${z.id===activeZone?' on':''}" onclick="selZone(${z.id})">
+  if(!P||!P.seaZones||!P.seaZones.length){el.innerHTML='<div style="font-size:9px;color:var(--dim);font-style:italic;padding:8px 0;text-align:center">No sea zones yet.<br>Press + New Zone,<br>then paint sea hexes.</div>';return;}
+  const deselBtn=activeZone!=null?`<div style="display:flex;justify-content:flex-end;margin-bottom:4px"><button class="mb" style="padding:3px 8px;font-size:8px" onclick="activeZone=null;renderZoneList();scheduleDraw()">✕ Deselect</button></div>`:'';
+  el.innerHTML=deselBtn+P.seaZones.map(z=>`<div class="li${z.id===activeZone?' on':''}" onclick="selZone(${z.id})">
     <span style="font-size:12px;margin-right:2px">🌊</span>
     <span class="ln">${z.name}</span>
     <span class="lm">${z.hexIds.length}h</span>
+    <span class="ld" onclick="event.stopPropagation();editZone(${z.id})" style="font-size:11px" title="Edit">✏</span>
     <span class="ld" onclick="event.stopPropagation();delZone(${z.id})">✕</span>
   </div>`).join('');
 }
@@ -425,12 +427,20 @@ function delZone(id){if(!P||!P.seaZones)return;P.seaZones=P.seaZones.filter(z=>z
 function editZone(id){
   if(!P||!P.seaZones)return;
   const z=P.seaZones.find(x=>x.id===id);if(!z)return;
+  const curFs=z.fontSize||12;
   openModal('Edit Sea Zone',`
     <label class="fl">Zone Name</label>
-    <input class="fi" id="ez-n" value="${z.name}" placeholder="e.g. ATLANTIC" style="margin-bottom:8px;text-transform:uppercase">
-    <p style="font-size:9px;color:var(--dim)">Zone contains ${z.hexIds.length} sea hexes. Name shown in italic at zone center.</p>`,
+    <input class="fi" id="ez-n" value="${z.name}" placeholder="e.g. ATLANTIC" style="margin-bottom:8px">
+    <label class="fl">Font Size</label>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="range" id="ez-fs" min="6" max="32" value="${curFs}" style="flex:1;accent-color:var(--gold)"
+        oninput="document.getElementById('ez-fsv').textContent=this.value+'px';z_preview_fs=+this.value;">
+      <span id="ez-fsv" style="font-family:Cinzel,serif;font-size:11px;color:var(--gold);min-width:32px;text-align:right">${curFs}px</span>
+    </div>
+    <p style="font-size:9px;color:var(--dim)">${z.hexIds.length} sea hexes in zone.</p>`,
   [{lbl:'Cancel'},{lbl:'Save',cls:'ok',cb:()=>{
     z.name=document.getElementById('ez-n').value.trim().toUpperCase()||z.name;
+    z.fontSize=+document.getElementById('ez-fs').value||12;
     renderZoneList();scheduleDraw();
   }}]);
 }
@@ -548,19 +558,21 @@ function draw(){
       const cx=hs.reduce((s,h)=>s+hCX(h.c,h.r),0)/hs.length;
       const cy=hs.reduce((s,h)=>s+hCY(h.r),0)/hs.length;
       if(cx<wx0||cx>wx1||cy<wy0||cy>wy1)return;
-      const fs=Math.max(9,Math.min(18,R*0.75));
+      // Per-zone font size (stored in z.fontSize), else auto
+      const fs=z.fontSize||Math.max(8,Math.min(16,R*0.65));
       ctx.font=`italic ${fs}px Cinzel,serif`;
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillStyle='rgba(65,135,200,.38)';
-      // Spaced letters effect via character spacing
-      const name=z.name;
-      const spacing=fs*0.18;
-      const totalW=(name.length-1)*spacing;
-      ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=4;
-      // Draw each letter with spacing
+      ctx.textAlign='left';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(65,135,200,.45)';
+      ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=5;
+      const name=z.name||'';
+      // Measure each char and space them with extra letter-spacing
+      const letterSpacing=fs*0.28;
+      const widths=name.split('').map(ch=>ctx.measureText(ch).width+letterSpacing);
+      const totalW=widths.reduce((s,w)=>s+w,0)-letterSpacing;
+      let lx=cx-totalW/2;
       for(let li=0;li<name.length;li++){
-        const lx=cx-totalW/2+li*spacing;
         ctx.fillText(name[li],lx,cy);
+        lx+=widths[li];
       }
       ctx.shadowBlur=0;
     });
@@ -858,6 +870,8 @@ function swTab(t){
   if(t==='land'&&activeTool!=='land'&&activeTool!=='sea')setTool('land');
   if(t==='prov'&&activeTool!=='prov'&&activeTool!=='erase'&&activeTool!=='pick')setTool('prov');
   if(t==='zone'&&activeTool!=='zone'&&activeTool!=='zone-erase')setTool('zone');
+  // Deselect zone when leaving seas tab
+  if(t!=='zone'){activeZone=null;scheduleDraw();}
 }
 
 // ── Modal ────────────────────────────────────────────
