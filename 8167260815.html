@@ -207,11 +207,11 @@ html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);f
     <!-- SEA ZONES TAB -->
     <div class="lpane" id="p-zone">
       <div class="sl">Sea Zones</div>
-      <p style="font-size:9px;color:var(--dim);margin-bottom:8px;line-height:1.5">Mark hexes as Sea (Land tab), then click a sea hex here to create a named zone. Zone name appears italic on map.</p>
-      <div class="tool on" id="tool-zone" onclick="setTool('zone')"><span class="ti2">🌊</span><div><div class="tn2">Create/Select Zone</div><div class="td">Click sea hex to create or select zone</div></div></div>
+      <button class="mb g" style="width:100%;padding:6px;margin-bottom:6px" onclick="createNewZone()">+ New Zone</button>
+      <div class="tool on" id="tool-zone" onclick="setTool('zone')"><span class="ti2">🖌</span><div><div class="tn2">Paint Zone</div><div class="td">Paint sea hexes into active zone</div></div></div>
       <div class="tool" id="tool-zone-erase" onclick="setTool('zone-erase')"><span class="ti2">✕</span><div><div class="tn2">Remove from Zone</div><div class="td">Click hex to remove from its zone</div></div></div>
       <div class="sl" style="margin-top:6px">Zones</div>
-      <div id="zone-list"><div style="font-size:9px;color:var(--dim);font-style:italic;padding:8px 0;text-align:center">No sea zones yet.<br>Switch to Zone tool,<br>click a sea hex.</div></div>
+      <div id="zone-list"><div style="font-size:9px;color:var(--dim);font-style:italic;padding:8px 0;text-align:center">No sea zones yet.<br>Press + New Zone,<br>then paint sea hexes.</div></div>
     </div>
     <!-- NATIONS TAB -->
     <div class="lpane" id="p-nat">
@@ -392,6 +392,15 @@ function getZone(hexIdx){
   if(!P.seaZones)return null;
   return P.seaZones.find(z=>z.hexIds.includes(hexIdx))||null;
 }
+function createNewZone(){
+  if(!P){return;}
+  if(!P.seaZones)P.seaZones=[];
+  const id=Date.now();
+  P.seaZones.push({id,name:'SEA ZONE',hexIds:[]});
+  activeZone=id;
+  renderZoneList();editZone(id);scheduleDraw();
+}
+
 function newSeaZone(fromHexIdx){
   if(!P.seaZones)P.seaZones=[];
   const id=Date.now();
@@ -539,13 +548,21 @@ function draw(){
       const cx=hs.reduce((s,h)=>s+hCX(h.c,h.r),0)/hs.length;
       const cy=hs.reduce((s,h)=>s+hCY(h.r),0)/hs.length;
       if(cx<wx0||cx>wx1||cy<wy0||cy>wy1)return;
-      const fs=Math.max(6,Math.min(13,R*0.55));
+      const fs=Math.max(9,Math.min(18,R*0.75));
       ctx.font=`italic ${fs}px Cinzel,serif`;
       ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillStyle='rgba(65,135,200,.32)';
-      ctx.letterSpacing='2px';
-      ctx.fillText(z.name,cx,cy);
-      ctx.letterSpacing='';
+      ctx.fillStyle='rgba(65,135,200,.38)';
+      // Spaced letters effect via character spacing
+      const name=z.name;
+      const spacing=fs*0.18;
+      const totalW=(name.length-1)*spacing;
+      ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=4;
+      // Draw each letter with spacing
+      for(let li=0;li<name.length;li++){
+        const lx=cx-totalW/2+li*spacing;
+        ctx.fillText(name[li],lx,cy);
+      }
+      ctx.shadowBlur=0;
     });
   }
 
@@ -629,27 +646,22 @@ function applyToHex(idx){
     else if(activeTool==='zone'){
       if(!h.sea)return;
       if(!P.seaZones)P.seaZones=[];
-      // Check if hex already in a zone
       const existing=P.seaZones.find(z=>z.hexIds.includes(i));
-      if(existing&&activeZone==null){
-        // Select existing zone
-        activeZone=existing.id;renderZoneList();scheduleDraw();return;
-      } else if(activeZone!=null){
-        // Paint into active zone
+      if(activeZone!=null){
+        // Always paint into active zone
         const az=P.seaZones.find(z=>z.id===activeZone);
-        if(az&&!az.hexIds.includes(i)){
-          // Remove from other zone first
+        if(az){
+          // Remove from other zones first
           P.seaZones.forEach(z=>{if(z.id!==activeZone)z.hexIds=z.hexIds.filter(x=>x!==i);});
-          az.hexIds.push(i);
-        } else if(!az){
-          // Active zone was deleted, create new
-          activeZone=null;newSeaZone(i);
+          if(!az.hexIds.includes(i))az.hexIds.push(i);
+        } else {
+          activeZone=null; // zone was deleted
         }
-      } else {
-        // No active zone — if clicking existing select it, else create new
-        if(existing){activeZone=existing.id;renderZoneList();}
-        else newSeaZone(i);
+      } else if(existing){
+        // No active zone — click selects existing zone
+        activeZone=existing.id;
       }
+      // If no active zone and hex has no zone — do nothing (must use + New Zone button)
       renderZoneList();scheduleDraw();return;
     }
     else if(activeTool==='zone-erase'){
