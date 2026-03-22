@@ -129,7 +129,7 @@ html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);f
     <div style="padding:8px 10px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#161008,#0d1018);flex-shrink:0">
       <div style="font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--gold);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px" id="tpn">Untitled</div>
       <div style="display:flex;gap:4px">
-        <button class="mb g" style="flex:1;padding:5px;font-size:8px" onclick="saveProject()">Save</button>
+        <button class="mb g" style="flex:1;padding:5px;font-size:8px" onclick="openSaveMenu()">Save</button>
         <button class="mb" style="flex:1;padding:5px;font-size:8px" onclick="undo()">↩ Undo</button>
         <button class="mb" style="flex:1;padding:5px;font-size:8px" onclick="show('proj')">Projects</button>
         <button class="mb" style="flex:1;padding:5px;font-size:8px" onclick="exportJS()">Export</button>
@@ -333,7 +333,36 @@ function saveProject(){
   if(!P)return;P.saved=today();
   const l=getProjs(),idx=l.findIndex(x=>x.id===P.id);
   if(idx>=0)l[idx]=P;else l.unshift(P);
-  setProjs(l);flash('✓ Saved');
+  setProjs(l);flash('✓ Saved (browser)');
+}
+
+function saveToFile(){
+  if(!P)return;
+  P.saved=today();
+  // Save full project as JSON file
+  const json=JSON.stringify(P,null,2);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+  a.download=(P.name||'project').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.json';
+  a.click();
+  flash('✓ Saved to file');
+}
+
+function openSaveMenu(){
+  openModal('Save Project',`
+    <p style="font-size:11px;color:var(--dim);margin-bottom:12px">Choose where to save your project.</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="mob ok" style="width:100%;padding:9px;text-align:left" onclick="closeMo();saveProject()">
+        💾 Save to Browser<br><span style="font-size:9px;color:var(--dim);font-weight:normal">Stored in browser localStorage. Lost if cache is cleared.</span>
+      </button>
+      <button class="mob ok" style="width:100%;padding:9px;text-align:left" onclick="closeMo();saveToFile()">
+        📁 Save to Computer (.json)<br><span style="font-size:9px;color:var(--dim);font-weight:normal">Downloads a .json file. Can be imported back via Projects screen.</span>
+      </button>
+      <button class="mob ok" style="width:100%;padding:9px;text-align:left" onclick="closeMo();saveProject();saveToFile()">
+        ✅ Save Both<br><span style="font-size:9px;color:var(--dim);font-weight:normal">Saves to browser AND downloads file.</span>
+      </button>
+    </div>`,
+  [{lbl:'Cancel'}]);
 }
 
 // ── Canvas & viewport ────────────────────────────────
@@ -966,6 +995,7 @@ function renderNatList(){
   el.innerHTML=P.nations.map(n=>`<div class="li${n.id===activeNat?' on':''}" onclick="selNat(${n.id})">
     <div class="sw" style="background:${n.color}"></div>
     <span class="ln">${n.name}</span><span class="lm" style="font-size:8px">${n.ideology}</span>
+    <span class="ld" onclick="event.stopPropagation();editNat(${n.id})" style="font-size:11px" title="Edit">✏</span>
     <span class="ld" onclick="event.stopPropagation();delNat(${n.id})">✕</span></div>`).join('');
 }
 
@@ -977,7 +1007,7 @@ function editNat(id){
   const nat=P.nations.find(n=>n.id===id);if(!nat)return;
   openModal('Edit Nation',`
     <label class="fl">Name</label><input class="fi" id="en-n" value="${nat.name}" style="margin-bottom:8px">
-    <label class="fl">Short (3–5 chars)</label><input class="fi" id="en-s" value="${nat.short}" maxlength="6" style="margin-bottom:8px">
+    <label class="fl">Short name</label><input class="fi" id="en-s" value="${nat.short}" style="margin-bottom:8px">
     <label class="fl">Color</label><input type="color" class="cp" id="en-c" value="${nat.color}">
     <label class="fl">Ideology</label><select class="fse" id="en-i">${IDEOS.map(i=>`<option${nat.ideology===i?' selected':''}>${i}</option>`).join('')}</select>`,
   [{lbl:'Cancel'},{lbl:'Save',cls:'ok',cb:()=>{
@@ -1027,44 +1057,143 @@ function confirmClear(){
 // ── Export ───────────────────────────────────────────
 function exportById(id){const p=getProjs().find(x=>x.id===id);if(p)doExport(p);}
 function exportJS(){if(P)doExport(P);}
+function exportById(id){const p=getProjs().find(x=>x.id===id);if(p)doExport(p);}
 
 function doExport(proj){
-  const H=proj.hexes,R=proj.hexR||18;
+  const H=proj.hexes, R=proj.hexR||18;
+
+  // ── Helper: hex world coords ──────────────────────────
+  function hcx(c,r){return R*Math.sqrt(3)*(c+(r%2)*0.5)+R;}
+  function hcy(r){return R*1.5*r+R;}
+
+  // ── Build province index map ──────────────────────────
+  const provIdxMap=new Map();
+  proj.provinces.forEach((p,i)=>provIdxMap.set(p.id,i));
+
+  // ── PROVINCES — full data ─────────────────────────────
   const provOut=proj.provinces.map((prov,idx)=>{
     const hs=prov.hexIds.map(i=>H[i]).filter(h=>h&&!h.sea);
     const src=hs.length?hs:prov.hexIds.map(i=>H[i]).filter(Boolean);
-    const cx=src.length?Math.round(src.reduce((s,h)=>s+R*Math.sqrt(3)*(h.c+(h.r%2)*0.5)+R,0)/src.length*10)/10:0;
-    const cy=src.length?Math.round(src.reduce((s,h)=>s+R*1.5*h.r+R,0)/src.length*10)/10:0;
-    const nat=prov.natId!=null?proj.nations.findIndex(n=>n.id===prov.natId):-1;
+    const cx=src.length?Math.round(src.reduce((s,h)=>s+hcx(h.c,h.r),0)/src.length*10)/10:0;
+    const cy=src.length?Math.round(src.reduce((s,h)=>s+hcy(h.r),0)/src.length*10)/10:0;
+    // Dominant terrain
     const tc={};hs.forEach(h=>{tc[h.t]=(tc[h.t]||0)+1;});
     const terrain=Object.entries(tc).sort((a,b)=>b[1]-a[1])[0]?.[0]||'plains';
+    // All hex terrain breakdown
+    const terrainMap={};
+    prov.hexIds.map(i=>H[i]).filter(h=>h&&!h.sea).forEach(h=>{terrainMap[h.t]=(terrainMap[h.t]||0)+1;});
+    const nat=prov.natId!=null?proj.nations.findIndex(n=>n.id===prov.natId):-1;
     const res={};Object.entries(prov.res||{}).forEach(([k,v])=>{if(+v>0)res[k]=+v;});
-    const o={id:idx,name:prov.name,short:prov.short,cx,cy,nation:nat>=0?nat:undefined,terrain};
-    if(prov.cap)o.isCapital=true;if(prov.coastal)o.isCoastal=true;
-    if(Object.keys(res).length)o.res=res;if(prov.pop)o.pop=prov.pop;
+    const o={
+      id:idx,
+      name:prov.name,
+      short:prov.short,
+      cx,cy,
+      terrain,
+      hexCount:prov.hexIds.length,
+      nation:nat>=0?nat:undefined,
+    };
+    if(prov.cap)o.isCapital=true;
+    if(prov.coastal)o.isCoastal=true;
+    if(prov.pop)o.pop=prov.pop;
+    if(Object.keys(res).length)o.res=res;
+    if(Object.keys(terrainMap).length>1)o.terrainMap=terrainMap;
     return o;
   });
+
+  // ── NB — province adjacency ───────────────────────────
   const NB=provOut.map(()=>[]);
-  for(let i=0;i<proj.provinces.length;i++)for(let j=i+1;j<proj.provinces.length;j++){
-    let adj=false;
-    for(const hi of proj.provinces[i].hexIds){
-      const h=H[hi];if(!h)continue;
-      const ev=h.r%2===0;
-      const dirs=ev?[[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]]:[[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
-      for(const[dr,dc]of dirs){const nr=h.r+dr,nc=h.c+dc;if(nr<0||nr>=proj.rows||nc<0||nc>=proj.cols)continue;if(proj.provinces[j].hexIds.includes(nr*proj.cols+nc)){adj=true;break;}}
-      if(adj)break;
-    }
-    if(adj){NB[i].push(j);NB[j].push(i);}
-  }
-  const natsOut=proj.nations.map((n,idx)=>{
-    const cp=proj.provinces.find(p=>p.natId===n.id&&p.cap);
-    const ci=cp?proj.provinces.indexOf(cp):-1;
-    const o={id:idx,name:n.name,short:n.short,color:n.color,ideology:n.ideology};
-    if(ci>=0)o.capital=ci;return o;
+  // Build hex→province index for fast lookup
+  const hexProvIdx=new Array(H.length).fill(-1);
+  proj.provinces.forEach((prov,pi)=>prov.hexIds.forEach(hi=>{hexProvIdx[hi]=pi;}));
+  const even_dirs=[[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+  const odd_dirs= [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+  const adjPairs=new Set();
+  proj.provinces.forEach((prov,pi)=>{
+    prov.hexIds.forEach(hi=>{
+      const h=H[hi];if(!h)return;
+      const dirs=h.r%2===0?even_dirs:odd_dirs;
+      dirs.forEach(([dr,dc])=>{
+        const nr=h.r+dr,nc=h.c+dc;
+        if(nr<0||nr>=proj.rows||nc<0||nc>=proj.cols)return;
+        const ni=nr*proj.cols+nc;
+        const pj=hexProvIdx[ni];
+        if(pj>=0&&pj!==pi){
+          const key=Math.min(pi,pj)+','+Math.max(pi,pj);
+          if(!adjPairs.has(key)){adjPairs.add(key);NB[pi].push(pj);NB[pj].push(pi);}
+        }
+      });
+    });
   });
-  const js=`// ToC Map Editor export — ${new Date().toISOString().slice(0,10)}\n// ${proj.name} | ${proj.cols}x${proj.rows} | ${provOut.length} provinces | ${natsOut.length} nations\n\nconst PROVINCES = ${JSON.stringify(provOut,null,2)};\n\nconst NB = ${JSON.stringify(NB)};\n\nconst NATIONS = ${JSON.stringify(natsOut,null,2)};\n\nconst LAND = PROVINCES.map((_,i)=>i).filter(i=>!PROVINCES[i].isSea);\nconst INIT_ALLIANCES = [];\n`;
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'}));a.download=(proj.name||'map').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.js';a.click();
-  openModal('Exported',`<p style="font-size:12px">Exported <b>${provOut.length}</b> provinces and <b>${natsOut.length}</b> nations.</p>`,[{lbl:'OK'}]);
+
+  // ── NATIONS — full data ───────────────────────────────
+  const natsOut=proj.nations.map((n,idx)=>{
+    const cap=proj.provinces.find(p=>p.natId===n.id&&p.cap);
+    const capIdx=cap?provIdxMap.get(cap.id)??-1:-1;
+    const o={id:idx,name:n.name,short:n.short,color:n.color,ideology:n.ideology};
+    if(capIdx>=0)o.capital=capIdx;
+    return o;
+  });
+
+  // ── SEA ZONES ─────────────────────────────────────────
+  const seaZonesOut=(proj.seaZones||[]).map((z,idx)=>{
+    const hs=z.hexIds.map(i=>H[i]).filter(Boolean);
+    const cx=hs.length?Math.round(hs.reduce((s,h)=>s+hcx(h.c,h.r),0)/hs.length*10)/10:0;
+    const cy=hs.length?Math.round(hs.reduce((s,h)=>s+hcy(h.r),0)/hs.length*10)/10:0;
+    return{id:idx,name:z.name,cx,cy,hexCount:z.hexIds.length,fontSize:z.fontSize||undefined};
+  });
+
+  // ── HEXES — compact array (only non-default values) ──
+  // Format: [row, col, terrain, sea(0/1), provinceIdx(-1=none)]
+  const hexesOut=H.map((h,i)=>{
+    const pi=hexProvIdx[i];
+    // Omit defaults: terrain=plains sea=true(water) prov=-1 to keep compact
+    return{r:h.r,c:h.c,t:h.t,sea:h.sea?1:0,p:pi};
+  });
+
+  // ── Assemble JS ───────────────────────────────────────
+  const date=new Date().toISOString().slice(0,10);
+  const js=`// ═══════════════════════════════════════════════════════
+// ToC Map Editor — Full Export
+// Project : ${proj.name}
+// Date    : ${date}
+// Grid    : ${proj.cols} × ${proj.rows} (hex R=${R}px)
+// Stats   : ${provOut.length} provinces · ${natsOut.length} nations · ${seaZonesOut.length} sea zones · ${H.filter(h=>!h.sea).length} land hexes
+// ═══════════════════════════════════════════════════════
+
+// ── Provinces ───────────────────────────────────────────
+const PROVINCES = ${JSON.stringify(provOut,null,2)};
+
+// ── Province adjacency (NB[i] = array of neighbour province indices) ──
+const NB = ${JSON.stringify(NB)};
+
+// ── Nations ─────────────────────────────────────────────
+const NATIONS = ${JSON.stringify(natsOut,null,2)};
+
+// ── Sea zones (for map labels) ───────────────────────────
+const SEA_ZONES = ${JSON.stringify(seaZonesOut,null,2)};
+
+// ── Raw hex grid (r=row, c=col, t=terrain, sea=1/0, p=provinceIdx or -1) ──
+const HEX_GRID = ${JSON.stringify({cols:proj.cols,rows:proj.rows,hexR:R,hexes:hexesOut})};
+
+// ── Helpers ─────────────────────────────────────────────
+const LAND = PROVINCES.map((_,i)=>i);
+const INIT_ALLIANCES = [];
+`;
+
+  const fname=(proj.name||'map').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'}));
+  a.download=fname+'_map.js';a.click();
+  openModal('Export Complete',`
+    <p style="font-size:12px;margin-bottom:8px">Exported <b>${fname}_map.js</b></p>
+    <div style="font-size:10px;color:var(--dim);line-height:1.8">
+      ✓ ${provOut.length} provinces with terrain, pop, resources<br>
+      ✓ ${natsOut.length} nations with colors, ideology, capitals<br>
+      ✓ ${NB.reduce((s,a)=>s+a.length,0)/2|0} province adjacency pairs (NB)<br>
+      ✓ ${seaZonesOut.length} sea zones with labels<br>
+      ✓ ${H.length} hexes (terrain + sea/land map)
+    </div>`,[{lbl:'OK'}]);
 }
 
 // ── Status ───────────────────────────────────────────
