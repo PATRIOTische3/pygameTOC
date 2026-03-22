@@ -220,11 +220,22 @@ html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);f
             oninput="bgCfg.y=+this.value;document.getElementById('bg-y-v').textContent=this.value;scheduleDraw()">
           <span id="bg-y-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:32px;text-align:right">0</span>
         </div>
-        <label class="fl">Scale</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <label class="fl" style="margin:0">Width</label>
+          <button id="bg-lock-btn" onclick="bgToggleLock()" title="Lock aspect ratio"
+            style="background:none;border:1px solid var(--border);color:var(--dim);font-size:10px;padding:1px 5px;cursor:pointer;font-family:Cinzel,serif;transition:all .12s"
+          >🔒</button>
+        </div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-          <input type="range" id="bg-sc" min="1" max="1000" value="100" style="flex:1;accent-color:var(--gold)"
-            oninput="bgCfg.scale=+this.value/100;document.getElementById('bg-sc-v').textContent=this.value+'%';scheduleDraw()">
-          <span id="bg-sc-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:32px;text-align:right">100%</span>
+          <input type="range" id="bg-sw" min="1" max="1000" value="100" style="flex:1;accent-color:var(--gold)"
+            oninput="bgSetW(+this.value)">
+          <span id="bg-sw-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:36px;text-align:right">100%</span>
+        </div>
+        <label class="fl">Height</label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <input type="range" id="bg-sh" min="1" max="1000" value="100" style="flex:1;accent-color:var(--gold)"
+            oninput="bgSetH(+this.value)">
+          <span id="bg-sh-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:36px;text-align:right">100%</span>
         </div>
         <label class="fl">Rotation</label>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
@@ -547,14 +558,45 @@ function hPath(cx,cy,r){
 
 // ── Background image ─────────────────────────────────
 let _bgImg=null;
-let bgCfg={x:0,y:0,scale:1,opacity:0.5,rot:0}; // x,y in world px offset from grid origin
+let bgCfg={x:0,y:0,scaleW:1,scaleH:1,opacity:0.5,rot:0};
+let _bgLock=true; // lock aspect ratio by default
+
+function bgToggleLock(){
+  _bgLock=!_bgLock;
+  const btn=document.getElementById('bg-lock-btn');
+  if(btn){btn.textContent=_bgLock?'🔒':'🔓';btn.style.color=_bgLock?'var(--gold)':'var(--dim)';}
+}
+
+function bgSetW(pct){
+  if(_bgLock&&_bgImg){
+    // Keep aspect: scaleH follows scaleW proportionally
+    const aspect=_bgImg.naturalWidth/_bgImg.naturalHeight;
+    bgCfg.scaleW=pct/100;
+    bgCfg.scaleH=pct/100/aspect*(_bgImg.naturalWidth/_bgImg.naturalHeight>1?1:1);
+    // Simpler: same percentage for both when locked
+    bgCfg.scaleH=pct/100;
+  } else {
+    bgCfg.scaleW=pct/100;
+  }
+  _bgSyncSliders();scheduleDraw();
+}
+
+function bgSetH(pct){
+  if(_bgLock&&_bgImg){
+    bgCfg.scaleW=pct/100;
+    bgCfg.scaleH=pct/100;
+  } else {
+    bgCfg.scaleH=pct/100;
+  }
+  _bgSyncSliders();scheduleDraw();
+}
 
 function loadBG(e){
   const f=e.target.files[0];if(!f)return;
   const img=new Image();
   img.onload=()=>{
     _bgImg=img;
-    bgFitToGrid(); // auto-fit on load
+    bgFitToGrid();
     document.getElementById('bg-controls').style.display='block';
     scheduleDraw();
   };
@@ -570,19 +612,18 @@ function clearBG(){
 function bgFitToGrid(){
   if(!_bgImg||!P)return;
   bgCfg.x=0;bgCfg.y=0;bgCfg.rot=0;
-  // Scale to fit grid
   const R=hR();
   const gw=R*Math.sqrt(3)*(P.cols+0.5)+R*2;
   const gh=R*1.5*P.rows+R*2;
-  const sx=gw/_bgImg.naturalWidth, sy=gh/_bgImg.naturalHeight;
-  bgCfg.scale=Math.min(sx,sy);
-  // Sync sliders
+  // Fit: scale so image exactly covers grid (stretch to fit)
+  bgCfg.scaleW=gw/_bgImg.naturalWidth;
+  bgCfg.scaleH=gh/_bgImg.naturalHeight;
   _bgSyncSliders();
   scheduleDraw();
 }
 
 function bgReset(){
-  bgCfg={x:0,y:0,scale:1,opacity:0.5,rot:0};
+  bgCfg={x:0,y:0,scaleW:1,scaleH:1,opacity:0.5,rot:0};
   _bgSyncSliders();
   scheduleDraw();
 }
@@ -593,7 +634,8 @@ function _bgSyncSliders(){
   s('bg-op',Math.round(bgCfg.opacity*100)); sv('bg-op-v',Math.round(bgCfg.opacity*100)+'%');
   s('bg-x',Math.round(bgCfg.x)); sv('bg-x-v',Math.round(bgCfg.x));
   s('bg-y',Math.round(bgCfg.y)); sv('bg-y-v',Math.round(bgCfg.y));
-  s('bg-sc',Math.round(bgCfg.scale*100)); sv('bg-sc-v',Math.round(bgCfg.scale*100)+'%');
+  s('bg-sw',Math.min(1000,Math.round(bgCfg.scaleW*100))); sv('bg-sw-v',Math.round(bgCfg.scaleW*100)+'%');
+  s('bg-sh',Math.min(1000,Math.round(bgCfg.scaleH*100))); sv('bg-sh-v',Math.round(bgCfg.scaleH*100)+'%');
   s('bg-rot',Math.round(bgCfg.rot)); sv('bg-rot-v',Math.round(bgCfg.rot)+'°');
 }
 
@@ -669,17 +711,10 @@ function draw(){
 
   // 2. Background image with full transform
   if(_bgImg){
-    const R=hR();
-    const gw=R*Math.sqrt(3)*(P.cols+0.5)+R*2;
-    const gh=R*1.5*P.rows+R*2;
-    // Image is positioned in world space (before vp transform)
-    // Origin: top-left of grid + bgCfg offset
-    const imgW=_bgImg.naturalWidth*bgCfg.scale;
-    const imgH=_bgImg.naturalHeight*bgCfg.scale;
-    // Center of image in world coords
+    const imgW=_bgImg.naturalWidth*bgCfg.scaleW;
+    const imgH=_bgImg.naturalHeight*bgCfg.scaleH;
     const worldCX=bgCfg.x+imgW/2;
     const worldCY=bgCfg.y+imgH/2;
-    // To screen
     const scx=worldCX*vp.s+vp.x;
     const scy=worldCY*vp.s+vp.y;
     ctx.save();
@@ -1105,9 +1140,10 @@ window.addEventListener('mouseup',e=>{
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();
   if(activeTool==='bgmove'&&_bgImg&&e.ctrlKey){
-    // Ctrl+scroll = scale BG
     const f=e.deltaY<0?1.05:1/1.05;
-    bgCfg.scale=Math.max(0.05,Math.min(10,bgCfg.scale*f));
+    bgCfg.scaleW=Math.max(0.01,Math.min(10,bgCfg.scaleW*f));
+    if(_bgLock) bgCfg.scaleH=bgCfg.scaleW;
+    else bgCfg.scaleH=Math.max(0.01,Math.min(10,bgCfg.scaleH*f));
     _bgSyncSliders();scheduleDraw();
   } else if(activeTool==='bgmove'&&_bgImg){
     // Scroll without ctrl = rotate BG
