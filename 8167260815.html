@@ -166,10 +166,52 @@ html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);f
         <button class="mb g" style="flex:1;padding:7px" onclick="applyGrid()">Apply</button>
         <button class="mb" style="flex:1;padding:7px" onclick="fitView();scheduleDraw()">Fit</button>
       </div>
-      <div class="sl">Background</div>
+      <div class="sl">Background Image</div>
       <input type="file" id="bg-up" accept="image/*" style="display:none" onchange="loadBG(event)">
-      <button class="mb" style="width:100%;padding:6px;margin-bottom:4px" onclick="document.getElementById('bg-up').click()">Upload Image</button>
-      <button class="mb" style="width:100%;padding:6px" onclick="clearBG()">Remove Image</button>
+      <div style="display:flex;gap:5px;margin-bottom:8px">
+        <button class="mb g" style="flex:1;padding:6px" onclick="document.getElementById('bg-up').click()">Upload</button>
+        <button class="mb" style="flex:1;padding:6px" onclick="clearBG()">Remove</button>
+      </div>
+      <div id="bg-controls" style="display:none">
+        <label class="fl">Opacity</label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <input type="range" id="bg-op" min="0" max="100" value="50" style="flex:1;accent-color:var(--gold)"
+            oninput="bgCfg.opacity=+this.value/100;document.getElementById('bg-op-v').textContent=this.value+'%';scheduleDraw()">
+          <span id="bg-op-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:32px;text-align:right">50%</span>
+        </div>
+        <label class="fl">Position X</label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <input type="range" id="bg-x" min="-2000" max="2000" value="0" style="flex:1;accent-color:var(--gold)"
+            oninput="bgCfg.x=+this.value;document.getElementById('bg-x-v').textContent=this.value;scheduleDraw()">
+          <span id="bg-x-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:32px;text-align:right">0</span>
+        </div>
+        <label class="fl">Position Y</label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <input type="range" id="bg-y" min="-2000" max="2000" value="0" style="flex:1;accent-color:var(--gold)"
+            oninput="bgCfg.y=+this.value;document.getElementById('bg-y-v').textContent=this.value;scheduleDraw()">
+          <span id="bg-y-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:32px;text-align:right">0</span>
+        </div>
+        <label class="fl">Scale</label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <input type="range" id="bg-sc" min="10" max="300" value="100" style="flex:1;accent-color:var(--gold)"
+            oninput="bgCfg.scale=+this.value/100;document.getElementById('bg-sc-v').textContent=this.value+'%';scheduleDraw()">
+          <span id="bg-sc-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:32px;text-align:right">100%</span>
+        </div>
+        <label class="fl">Rotation</label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <input type="range" id="bg-rot" min="-180" max="180" value="0" style="flex:1;accent-color:var(--gold)"
+            oninput="bgCfg.rot=+this.value;document.getElementById('bg-rot-v').textContent=this.value+'°';scheduleDraw()">
+          <span id="bg-rot-v" style="font-family:Cinzel,serif;font-size:10px;color:var(--gold);min-width:32px;text-align:right">0°</span>
+        </div>
+        <div style="display:flex;gap:5px;margin-bottom:4px">
+          <button class="mb" style="flex:1;padding:5px;font-size:8px" onclick="bgFitToGrid()">Fit to Grid</button>
+          <button class="mb" style="flex:1;padding:5px;font-size:8px" onclick="bgReset()">Reset</button>
+        </div>
+        <div class="tool" id="tool-bgmove" onclick="setTool('bgmove')" style="margin-top:6px">
+          <span class="ti2">✥</span>
+          <div><div class="tn2">Drag BG Image</div><div class="td">Drag to reposition on canvas</div></div>
+        </div>
+      </div>
     </div>
     <!-- LAND TAB -->
     <div class="lpane" id="p-land">
@@ -433,13 +475,55 @@ function hPath(cx,cy,r){
 
 // ── Background image ─────────────────────────────────
 let _bgImg=null;
+let bgCfg={x:0,y:0,scale:1,opacity:0.5,rot:0}; // x,y in world px offset from grid origin
+
 function loadBG(e){
   const f=e.target.files[0];if(!f)return;
   const img=new Image();
-  img.onload=()=>{_bgImg=img;scheduleDraw();};
+  img.onload=()=>{
+    _bgImg=img;
+    bgFitToGrid(); // auto-fit on load
+    document.getElementById('bg-controls').style.display='block';
+    scheduleDraw();
+  };
   img.src=URL.createObjectURL(f);
 }
-function clearBG(){_bgImg=null;scheduleDraw();}
+
+function clearBG(){
+  _bgImg=null;
+  document.getElementById('bg-controls').style.display='none';
+  scheduleDraw();
+}
+
+function bgFitToGrid(){
+  if(!_bgImg||!P)return;
+  bgCfg.x=0;bgCfg.y=0;bgCfg.rot=0;
+  // Scale to fit grid
+  const R=hR();
+  const gw=R*Math.sqrt(3)*(P.cols+0.5)+R*2;
+  const gh=R*1.5*P.rows+R*2;
+  const sx=gw/_bgImg.naturalWidth, sy=gh/_bgImg.naturalHeight;
+  bgCfg.scale=Math.min(sx,sy);
+  // Sync sliders
+  _bgSyncSliders();
+  scheduleDraw();
+}
+
+function bgReset(){
+  bgCfg={x:0,y:0,scale:1,opacity:0.5,rot:0};
+  _bgSyncSliders();
+  scheduleDraw();
+}
+
+function _bgSyncSliders(){
+  const s=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
+  const sv=(id,txt)=>{const el=document.getElementById(id);if(el)el.textContent=txt;};
+  s('bg-op',Math.round(bgCfg.opacity*100)); sv('bg-op-v',Math.round(bgCfg.opacity*100)+'%');
+  s('bg-x',Math.round(bgCfg.x)); sv('bg-x-v',Math.round(bgCfg.x));
+  s('bg-y',Math.round(bgCfg.y)); sv('bg-y-v',Math.round(bgCfg.y));
+  s('bg-sc',Math.round(bgCfg.scale*100)); sv('bg-sc-v',Math.round(bgCfg.scale*100)+'%');
+  s('bg-rot',Math.round(bgCfg.rot)); sv('bg-rot-v',Math.round(bgCfg.rot)+'°');
+}
 
 // ── Sea zones ─────────────────────────────────────────
 // P.seaZones = [{id, name, hexIds:[]}]
@@ -511,16 +595,26 @@ function draw(){
   g.addColorStop(0,'#08162a');g.addColorStop(1,'#0c1e38');
   ctx.fillStyle=g;ctx.fillRect(0,0,CW,CH);
 
-  // 2. Background image drawn UNDER everything, scaled to grid bounds
+  // 2. Background image with full transform
   if(_bgImg){
     const R=hR();
     const gw=R*Math.sqrt(3)*(P.cols+0.5)+R*2;
     const gh=R*1.5*P.rows+R*2;
-    const sx=vp.x, sy=vp.y, sw=gw*vp.s, sh=gh*vp.s;
+    // Image is positioned in world space (before vp transform)
+    // Origin: top-left of grid + bgCfg offset
+    const imgW=_bgImg.naturalWidth*bgCfg.scale;
+    const imgH=_bgImg.naturalHeight*bgCfg.scale;
+    // Center of image in world coords
+    const worldCX=bgCfg.x+imgW/2;
+    const worldCY=bgCfg.y+imgH/2;
+    // To screen
+    const scx=worldCX*vp.s+vp.x;
+    const scy=worldCY*vp.s+vp.y;
     ctx.save();
-    ctx.globalAlpha=0.5;
-    ctx.drawImage(_bgImg,sx,sy,sw,sh);
-    ctx.globalAlpha=1;
+    ctx.globalAlpha=bgCfg.opacity;
+    ctx.translate(scx,scy);
+    ctx.rotate(bgCfg.rot*Math.PI/180);
+    ctx.drawImage(_bgImg,-imgW/2*vp.s,-imgH/2*vp.s,imgW*vp.s,imgH*vp.s);
     ctx.restore();
   }
 
@@ -757,8 +851,8 @@ let _pan={a:false,lx:0,ly:0},_pinch={a:false,d:0},_painting=false,_moved=false,_
 
 function setTool(t){
   activeTool=t;
-  ['land','sea','prov','erase','pick','zone','zone-erase'].forEach(k=>{const el=document.getElementById('tool-'+k);if(el)el.classList.toggle('on',k===t);});
-  canvas.style.cursor=t==='pick'||t==='zone'?'pointer':'crosshair';
+  ['land','sea','prov','erase','pick','zone','zone-erase','bgmove'].forEach(k=>{const el=document.getElementById('tool-'+k);if(el)el.classList.toggle('on',k===t);});
+  canvas.style.cursor=t==='pick'||t==='zone'?'pointer':t==='bgmove'?'move':'crosshair';
   scheduleDraw();
 }
 function setTerrain(t){activeTerrain=t;document.querySelectorAll('.tc').forEach(c=>c.classList.toggle('on',c.dataset.t===t));}
@@ -850,9 +944,13 @@ window.addEventListener('mousemove',e=>{
   if(!_pan.a)return;
   const dx=e.clientX-_pan.lx,dy=e.clientY-_pan.ly;
   if(Math.abs(dx)>3||Math.abs(dy)>3)_moved=true;
-  if(_moved&&_painting&&(activeTool==='land'||activeTool==='sea'||activeTool==='prov'||activeTool==='erase')){
+  if(_moved&&activeTool==='bgmove'&&_bgImg){
+    // Move bg in world coordinates (divide screen delta by viewport scale)
+    bgCfg.x+=dx/vp.s; bgCfg.y+=dy/vp.s;
+    _bgSyncSliders(); scheduleDraw();
+  } else if(_moved&&_painting&&(activeTool==='land'||activeTool==='sea'||activeTool==='prov'||activeTool==='erase')){
     const r=canvas.getBoundingClientRect();const[wx,wy]=toW(e.clientX-r.left,e.clientY-r.top);applyToHex(hitHex(wx,wy));
-  } else if(_moved){vp.x+=dx;vp.y+=dy;scheduleDraw();}
+  } else if(_moved&&activeTool!=='bgmove'){vp.x+=dx;vp.y+=dy;scheduleDraw();}
   _pan.lx=e.clientX;_pan.ly=e.clientY;
   const r2=canvas.getBoundingClientRect();const[wx2,wy2]=toW(e.clientX-r2.left,e.clientY-r2.top);
   const hi=hitHex(wx2,wy2);
@@ -862,7 +960,22 @@ window.addEventListener('mouseup',e=>{
   _pan.a=false;_painting=false;
   if(!_moved&&Date.now()-_ts.t<400){const r=canvas.getBoundingClientRect();const[wx,wy]=toW(e.clientX-r.left,e.clientY-r.top);applyToHex(hitHex(wx,wy));}
 });
-canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoomBy(e.deltaY<0?1.13:1/1.13,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  if(activeTool==='bgmove'&&_bgImg&&e.ctrlKey){
+    // Ctrl+scroll = scale BG
+    const f=e.deltaY<0?1.05:1/1.05;
+    bgCfg.scale=Math.max(0.05,Math.min(10,bgCfg.scale*f));
+    _bgSyncSliders();scheduleDraw();
+  } else if(activeTool==='bgmove'&&_bgImg){
+    // Scroll without ctrl = rotate BG
+    bgCfg.rot=Math.max(-180,Math.min(180,bgCfg.rot+(e.deltaY>0?1:-1)));
+    _bgSyncSliders();scheduleDraw();
+  } else {
+    const r=canvas.getBoundingClientRect();
+    zoomBy(e.deltaY<0?1.13:1/1.13,e.clientX-r.left,e.clientY-r.top);
+  }
+},{passive:false});
 
 // Touch
 canvas.addEventListener('touchstart',e=>{
