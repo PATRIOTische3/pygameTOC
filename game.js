@@ -62,34 +62,43 @@ function advanceWeek(){
 let HEX_R = 4.75;
 function computeHexRadius(){
   if(PROVINCES.length < 10){HEX_R=4.75;return;}
+
+  // Sample province centroids to find the most common neighbour distance.
+  // The old map uses cx/cy with ~7-8px hex spacing; the new editor export
+  // uses the actual hex grid spacing.  We keep the range wide (2..30) and
+  // use the MEDIAN of the lowest-distance cluster to avoid being thrown off
+  // by diagonal or skip-one distances.
   const dists=[];
-  const sample=Math.min(PROVINCES.length,300);
+  const sample=Math.min(PROVINCES.length,400);
   for(let i=0;i<sample;i++){
     for(let j=i+1;j<sample;j++){
       const dx=PROVINCES[i].cx-PROVINCES[j].cx, dy=PROVINCES[i].cy-PROVINCES[j].cy;
       const d=Math.sqrt(dx*dx+dy*dy);
-      if(d>3&&d<14) dists.push(d);
+      if(d>1.5&&d<30) dists.push(d);
     }
   }
   if(dists.length<5){HEX_R=4.75;return;}
   dists.sort((a,b)=>a-b);
-  const step=0.5;
+
+  // Find the first clear peak: bin into 0.25px buckets, take the mode
+  const step=0.25;
   const bins={};
   dists.forEach(d=>{const b=Math.round(d/step)*step;bins[b]=(bins[b]||0)+1;});
-  const neighborDist=parseFloat(Object.entries(bins).sort((a,b)=>b[1]-a[1])[0][0]);
-  HEX_R = (neighborDist / Math.sqrt(3)) * 0.995;
+  const sorted=Object.entries(bins).sort((a,b)=>b[1]-a[1]);
+  const neighborDist=parseFloat(sorted[0][0]);
+
+  // For a pointy-top hex grid: spacing between centres = sqrt(3)*R
+  // So R = spacing / sqrt(3).  Multiply by 0.99 to leave a 1% overlap that
+  // closes antialiasing seams without visibly enlarging hexes.
+  HEX_R = (neighborDist / Math.sqrt(3)) * 0.99;
 
   // ── Rebuild NB for ALL provinces using coordinate proximity ──
-  // NB in map.js only has 100 slots — fix for full 1700+ province set
   const N=PROVINCES.length;
-  // Resize NB to cover all provinces
   while(NB.length<N) NB.push([]);
-  // Threshold: neighbor if distance < neighborDist * 1.25
-  const thresh=neighborDist*1.25;
+  // Use 1.35× spacing as neighbour threshold (covers slight grid irregularity)
+  const thresh=neighborDist*1.35;
   const thresh2=thresh*thresh;
-  for(let i=0;i<N;i++){
-    NB[i]=[];  // clear old
-  }
+  for(let i=0;i<N;i++) NB[i]=[];
   for(let i=0;i<N;i++){
     for(let j=i+1;j<N;j++){
       const dx=PROVINCES[i].cx-PROVINCES[j].cx;
@@ -280,7 +289,91 @@ function canSeeArmy(i){
   if((G.buildings[i]||[]).includes('fortress')&&o===G.playerNation)return true;
   return false;
 }
-const TC={plains:'#3a4828',forest:'#2a3a1c',mountain:'#4a3e30',swamp:'#405838',desert:'#4a3e28',urban:'#2a2420',tundra:'#354040'};
+// Terrain fill colours — kept in sync with TERRAIN{} in map.js
+const TC={
+  plains:  '#3a4828', forest:  '#2a3a1c', mountain:'#4a3e30',
+  hills:   '#5a5a38', highland:'#5a4e3c', swamp:   '#405838',
+  marsh:   '#384838', desert:  '#4a3e28', steppe:  '#5a4e28',
+  savanna: '#6a5a28', scrub:   '#5a5a28', jungle:  '#1e4c2c',
+  taiga:   '#2a4a38', tundra:  '#354040', ice:     '#6a7878',
+  farmland:'#506038', urban:   '#2a2420', volcanic:'#4a2820',
+};
+
+// ── TERRAIN HELPERS ───────────────────────────────────────
+// Returns weighted-average defB for a province, optionally biased
+// toward the hexes that face the attacking province (fromIdx).
+// Falls back gracefully to TERRAIN[p.terrain] if no HEX_GRID present.
+function provDefB(toIdx, fromIdx){
+  const p = PROVINCES[toIdx];
+  const baseTerrain = TERRAIN[p.terrain||'plains'] || TERRAIN.plains;
+
+  // No terrainMap → simple lookup (old behaviour)
+  if(!p.terrainMap || !Object.keys(p.terrainMap).length)
+    return baseTerrain.defB;
+
+  // Build a frequency map of terrain types in this province
+  const entries = Object.entries(p.terrainMap); // [[hexIdx, terrainType], ...]
+
+  // If we know the attacker's province, find border hexes.
+  // A border hex of province `toIdx` is one that is adjacent to ANY hex
+  // belonging to province `fromIdx`. We detect this via HEX_GRID if available.
+  let hexWeights = null;
+  if(fromIdx >= 0 && typeof HEX_GRID !== 'undefined' && HEX_GRID.hexes){
+    const fromHexSet = new Set();
+    HEX_GRID.hexes.forEach((h,hi)=>{ if(h.p===fromIdx) fromHexSet.add(hi); });
+
+    // Build neighbour lookup once (cached on HEX_GRID to avoid rebuilding)
+    if(!HEX_GRID._nbCache){
+      const cols = HEX_GRID.cols;
+      HEX_GRID._nbCache = HEX_GRID.hexes.map((h,hi)=>{
+        const even = h.r%2===0;
+        const dirs = even
+          ? [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]]
+          : [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+        return dirs.map(([dr,dc])=>{
+          const nr=h.r+dr, nc=h.c+dc;
+          if(nr<0||nr>=HEX_GRID.rows||nc<0||nc>=cols) return -1;
+          return nr*cols+nc;
+        }).filter(ni=>ni>=0);
+      });
+    }
+
+    // Which hexes of toIdx border fromIdx?
+    const borderHexes = new Set();
+    entries.forEach(([hiStr])=>{
+      const hi = +hiStr;
+      if(HEX_GRID._nbCache[hi]?.some(ni=>fromHexSet.has(ni)))
+        borderHexes.add(hiStr);
+    });
+
+    if(borderHexes.size > 0){
+      // Weight border hexes ×3, interior hexes ×1
+      hexWeights = entries.map(([hiStr, t])=>
+        [t, borderHexes.has(hiStr) ? 3 : 1]
+      );
+    }
+  }
+
+  // Weighted average of defB across all hex terrains
+  if(!hexWeights) hexWeights = entries.map(([,t])=>[t,1]);
+  let totalW = 0, totalDefB = 0;
+  hexWeights.forEach(([t, w])=>{
+    const td = TERRAIN[t]||baseTerrain;
+    totalDefB += td.defB * w;
+    totalW += w;
+  });
+  return totalW > 0 ? totalDefB/totalW : baseTerrain.defB;
+}
+
+// Weighted-average income modifier for a province (used in economy tick)
+function provIncM(idx){
+  const p = PROVINCES[idx];
+  if(!p.terrainMap || !Object.keys(p.terrainMap).length)
+    return (TERRAIN[p.terrain||'plains']||TERRAIN.plains).incM;
+  const entries = Object.entries(p.terrainMap);
+  const sum = entries.reduce((s,[,t])=>s+(TERRAIN[t]||TERRAIN.plains).incM, 0);
+  return sum / entries.length;
+}
 const RES_COLORS={oil:'#8a6020',coal:'#303030',grain:'#5a7020',steel:'#405070'};
 
 const REBEL_COLOR='#c86820'; // orange-amber for rebels
@@ -347,6 +440,7 @@ function provColor(i){
 }
 
 // ── SEA LABELS ────────────────────────────────────────────
+// Legacy fallback — used when map.js does NOT export SEA_ZONES
 const SEA_LABELS=[
   {t:'ATLANTIC',x:40,y:300},{t:'NORTH SEA',x:182,y:224},
   {t:'NORW. SEA',x:185,y:160},{t:'BALTIC',x:303,y:226},
@@ -355,6 +449,12 @@ const SEA_LABELS=[
   {t:'BLACK SEA',x:440,y:376},{t:'CASPIAN',x:568,y:364},
   {t:'ARCTIC',x:360,y:72},{t:'BARENTS',x:508,y:96},
 ];
+// Use SEA_ZONES from editor export when available, fall back to hardcoded list
+function _seaLabels(){
+  if(typeof SEA_ZONES!=='undefined'&&SEA_ZONES.length)
+    return SEA_ZONES.map(z=>({t:z.name.toUpperCase(),x:z.cx,y:z.cy,fs:z.fontSize}));
+  return SEA_LABELS;
+}
 
 // ── MAIN DRAW ─────────────────────────────────────────────
 function drawMap(){
@@ -379,71 +479,141 @@ function drawMap(){
   ctx.save();
   ctx.translate(vp.tx,vp.ty);ctx.scale(vp.scale,vp.scale);
 
-  // Sea labels
-  ctx.font='italic 7px Cinzel,serif';
-  ctx.fillStyle='rgba(65,135,200,.26)';ctx.textAlign='center';ctx.textBaseline='middle';
-  SEA_LABELS.forEach(sl=>{
+  // Sea labels — from editor SEA_ZONES or legacy hardcoded list
+  _seaLabels().forEach(sl=>{
     if(sl.x<wx0-20||sl.x>wx1+20||sl.y<wy0-10||sl.y>wy1+10)return;
+    ctx.font=`italic ${sl.fs||7}px Cinzel,serif`;
+    ctx.fillStyle='rgba(65,135,200,.26)';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(sl.t,sl.x,sl.y);
   });
 
   
-  // Draw hexes — two passes: fill (slightly enlarged to kill AA gaps) then borders
-  PROVINCES.forEach((p,i)=>{
-    if(p.cx<wx0-30||p.cx>wx1+30||p.cy<wy0-30||p.cy>wy1+30)return;
-    const r=scaledR(i);
-    // Bloat fill by 0.6px in world-space to cover antialiasing seams
-    hexPath(ctx,p.cx,p.cy,r+0.6/vp.scale);
-    ctx.fillStyle=provColor(i);
-    ctx.fill();
-  });
+  // ── DRAW HEXES ────────────────────────────────────────────
+  // Two modes:
+  //   A) HEX_GRID present (editor export) → draw every raw hex with its own
+  //      terrain colour, then overlay province political colour with transparency.
+  //   B) No HEX_GRID (old map.js) → draw province centroid hex as before.
+  //
+  // Both modes: second pass draws borders between different owners.
 
-  // Borders — only draw on selected/target hexes + nation boundaries (skip internal same-nation borders)
-  PROVINCES.forEach((p,i)=>{
-    if(p.cx<wx0-30||p.cx>wx1+30||p.cy<wy0-30||p.cy>wy1+30)return;
-    const r=scaledR(i);
-    const o=G.owner[i];
-    // Always stroke selected/move targets
-    if(i===G.sel){
-      hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=2/vp.scale;ctx.stroke();
-    } else if(G.moveMode&&G.moveFrom>=0&&isMoveTgt(i)){
-      hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,255,80,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
-    } else if(_atkSelectMode&&isAtkSrc(i)){
-      hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,80,80,.9)';ctx.lineWidth=1.8/vp.scale;ctx.stroke();
-    } else if(G.navalMode&&G.navalFrom>=0&&navalDests(G.navalFrom).includes(i)){
-      hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,200,255,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
-    } else {
-      // Only draw thin dark border if any neighbor has a DIFFERENT owner
-      const hasBorder=(NB[i]||[]).some(nb=>G.owner[nb]!==o);
-      if(hasBorder){
-        hexPath(ctx,p.cx,p.cy,r);
-        if(o<0 && !PROVINCES[i]?.isSea && G.mapMode==='political'){
-          // Rebel province — subtle orange fill border
-          ctx.save();
-          ctx.setLineDash([2.5/vp.scale,2/vp.scale]);
-          ctx.strokeStyle='rgba(200,100,30,.7)';ctx.lineWidth=1.2/vp.scale;
-          ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.restore();
-        } else if(o===G.playerNation && G.mapMode==='political'){
-          // Player province — check if any neighbor is a rebel; if so draw dashed green border
-          const hasRebelNeighbor=(NB[i]||[]).some(nb=>G.owner[nb]<0&&!PROVINCES[nb]?.isSea);
-          if(hasRebelNeighbor){
-            ctx.save();
-            ctx.setLineDash([3/vp.scale,2/vp.scale]);
-            ctx.strokeStyle='rgba(60,200,60,.85)';ctx.lineWidth=1.6/vp.scale;
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.restore();
+  const HAS_HEXGRID = typeof HEX_GRID !== 'undefined' && HEX_GRID.hexes && HEX_GRID.hexes.length;
+
+  if(HAS_HEXGRID){
+    // ── Mode A: per-hex render ─────────────────────────────
+    const hR   = HEX_GRID.hexR || HEX_R;
+    const cols = HEX_GRID.cols;
+    const rows = HEX_GRID.rows;
+    function hcx(c,r){ return hR*Math.sqrt(3)*(c+(r%2)*0.5)+hR; }
+    function hcy(r){ return hR*1.5*r+hR; }
+
+    const m = G.mapMode;
+
+    // Pass 1 — terrain fill + political overlay
+    HEX_GRID.hexes.forEach(h=>{
+      const cx=hcx(h.c,h.r), cy=hcy(h.r);
+      if(cx<wx0-hR*2||cx>wx1+hR*2||cy<wy0-hR*2||cy>wy1+hR*2) return;
+
+      const pi = h.p; // province index, -1 = unassigned/open sea
+
+      // Sea hex — just draw ocean, skip
+      if(h.sea){
+        hexPath(ctx,cx,cy,hR+0.5/vp.scale);
+        ctx.fillStyle='#0a1828';
+        ctx.fill();
+        return;
+      }
+
+      // Land hex — determine colours
+      const terrainCol = TC[h.t] || TC.plains;
+
+      if(m==='terrain'){
+        // Pure terrain view — just the raw terrain colour
+        hexPath(ctx,cx,cy,hR+0.5/vp.scale);
+        ctx.fillStyle=terrainCol;
+        ctx.fill();
+        return;
+      }
+
+      // Political / other modes:
+      // Draw terrain base, then overlay province political colour semi-transparent
+      hexPath(ctx,cx,cy,hR+0.5/vp.scale);
+      ctx.fillStyle=terrainCol;
+      ctx.fill();
+
+      if(pi>=0){
+        const polCol = provColor(pi);   // returns hex string
+        // Convert to rgba with ~55% opacity so terrain bleeds through
+        hexPath(ctx,cx,cy,hR+0.5/vp.scale);
+        ctx.fillStyle=polCol+'8c'; // 8c ≈ 55% opacity in hex
+        ctx.fill();
+      }
+    });
+
+    // Pass 2 — province borders (drawn on province centroids as before,
+    // but now only as thin outlines so seams between hexes are visible)
+    PROVINCES.forEach((p,i)=>{
+      if(p.cx<wx0-30||p.cx>wx1+30||p.cy<wy0-30||p.cy>wy1+30) return;
+      const r=scaledR(i);
+      const o=G.owner[i];
+      if(i===G.sel){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=2/vp.scale;ctx.stroke();
+      } else if(G.moveMode&&G.moveFrom>=0&&isMoveTgt(i)){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,255,80,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
+      } else if(_atkSelectMode&&isAtkSrc(i)){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,80,80,.9)';ctx.lineWidth=1.8/vp.scale;ctx.stroke();
+      } else if(G.navalMode&&G.navalFrom>=0&&navalDests(G.navalFrom).includes(i)){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,200,255,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
+      }
+    });
+
+  } else {
+    // ── Mode B: legacy centroid-only render ───────────────
+    // Fill pass
+    PROVINCES.forEach((p,i)=>{
+      if(p.cx<wx0-30||p.cx>wx1+30||p.cy<wy0-30||p.cy>wy1+30)return;
+      const r=scaledR(i);
+      hexPath(ctx,p.cx,p.cy,r+0.6/vp.scale);
+      ctx.fillStyle=provColor(i);
+      ctx.fill();
+    });
+
+    // Border pass
+    PROVINCES.forEach((p,i)=>{
+      if(p.cx<wx0-30||p.cx>wx1+30||p.cy<wy0-30||p.cy>wy1+30)return;
+      const r=scaledR(i);
+      const o=G.owner[i];
+      if(i===G.sel){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=2/vp.scale;ctx.stroke();
+      } else if(G.moveMode&&G.moveFrom>=0&&isMoveTgt(i)){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,255,80,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
+      } else if(_atkSelectMode&&isAtkSrc(i)){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(255,80,80,.9)';ctx.lineWidth=1.8/vp.scale;ctx.stroke();
+      } else if(G.navalMode&&G.navalFrom>=0&&navalDests(G.navalFrom).includes(i)){
+        hexPath(ctx,p.cx,p.cy,r);ctx.strokeStyle='rgba(80,200,255,.9)';ctx.lineWidth=1.6/vp.scale;ctx.stroke();
+      } else {
+        const hasBorder=(NB[i]||[]).some(nb=>G.owner[nb]!==o);
+        if(hasBorder){
+          hexPath(ctx,p.cx,p.cy,r);
+          if(o<0&&!PROVINCES[i]?.isSea&&G.mapMode==='political'){
+            ctx.save();ctx.setLineDash([2.5/vp.scale,2/vp.scale]);
+            ctx.strokeStyle='rgba(200,100,30,.7)';ctx.lineWidth=1.2/vp.scale;
+            ctx.stroke();ctx.setLineDash([]);ctx.restore();
+          } else if(o===G.playerNation&&G.mapMode==='political'){
+            const hasRebelNeighbor=(NB[i]||[]).some(nb=>G.owner[nb]<0&&!PROVINCES[nb]?.isSea);
+            if(hasRebelNeighbor){
+              ctx.save();ctx.setLineDash([3/vp.scale,2/vp.scale]);
+              ctx.strokeStyle='rgba(60,200,60,.85)';ctx.lineWidth=1.6/vp.scale;
+              ctx.stroke();ctx.setLineDash([]);ctx.restore();
+            } else {
+              ctx.strokeStyle='rgba(6,8,14,.65)';ctx.lineWidth=.5/vp.scale;ctx.stroke();
+            }
           } else {
             ctx.strokeStyle='rgba(6,8,14,.65)';ctx.lineWidth=.5/vp.scale;ctx.stroke();
           }
-        } else {
-          ctx.strokeStyle='rgba(6,8,14,.65)';ctx.lineWidth=.5/vp.scale;ctx.stroke();
         }
       }
-    }
-  });
+    });
+  }
 
   // Labels — only when zoomed enough
   if(vp.scale>0.55){
@@ -775,7 +945,18 @@ function showProvPopup(i, screenX, screenY){
   if(isOurs){
     stats.push({l:'Satisfaction', v: Math.round(G.satisfaction[i]||0)+'%'});
   } else {
-    stats.push({l:'Terrain', v: TERRAIN[p.terrain||'plains']&&TERRAIN[p.terrain||'plains'].name||'Plains'});
+    stats.push({l:'Terrain', v: (()=>{
+      const tm = p.terrainMap && Object.values(p.terrainMap);
+      if(tm && tm.length > 1){
+        // Count dominant terrain
+        const freq = {};
+        tm.forEach(t=>{ freq[t]=(freq[t]||0)+1; });
+        const dom = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+        const types = Object.keys(freq).length;
+        return (TERRAIN[dom]?.name||dom) + (types>1?` +${types-1}`:'');
+      }
+      return TERRAIN[p.terrain||'plains']?.name||'Plains';
+    })()});
   }
 
   const gridHtml = stats.map(s=>`<div class="pp-cell"><div class="pp-label">${s.l}</div><div class="pp-val">${s.v}</div></div>`).join('');
@@ -2306,7 +2487,7 @@ function runBattle(fr,to,atkF,atker,done){
   const io2=isP?ideol():IDEOLOGIES[NATIONS[atker]?.ideology||'nationalism'];
   const terrain=TERRAIN[PROVINCES[to].terrain||'plains'];
   const hasFort=(G.buildings[to]||[]).includes('fortress');
-  const defM=terrain.defB*(hasFort?1.6:1);
+  const defM=provDefB(to, fr)*(hasFort?1.6:1);
   const instPen=isP?Math.max(.7,1-G.instab[fr]/150):1.0;
   const capPen=G.capitalPenalty[atker]>0?.85:1.0;
   const hasArsenal=(G.buildings[fr]||[]).includes('arsenal');
@@ -2810,9 +2991,11 @@ function endTurn(){
     let inc=G.income[r];
     if((G.buildings[r]||[]).includes('factory'))inc=Math.floor(inc*1.8);
     if((G.buildings[r]||[]).includes('palace'))inc=Math.floor(inc*1.15);
+    // Terrain income modifier — averaged across all hexes if terrainMap present
+    const terrIncM = provIncM(r);
     // Tax rate scales income: 25% base = full income, lower = less, higher = more
     const taxIncomeFactor=0.4+taxMod*2.4; // 0% tax→0.4x income, 25%→1.0x, 50%→1.6x, 100%→2.8x
-    inc=Math.floor(inc*io.income*satIncomeMod*reformMod*(1-Math.min(.5,G.instab[r]/100))*s.incomeMod*taxIncomeFactor);
+    inc=Math.floor(inc*io.income*satIncomeMod*reformMod*(1-Math.min(.5,G.instab[r]/100))*s.incomeMod*taxIncomeFactor*terrIncM);
     G.gold[PN]+=inc;
 
     // Puppet tribute
