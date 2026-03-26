@@ -57,7 +57,6 @@ const TERRAIN={
   volcanic: {name:'Volcanic', defB:0.75, incM:0.50, movM:0.6, col:'#4a2820'},
 };
 
-// ── SEASONS ───────────────────────────────────────────────
 const SEASONS=[
   {name:'Winter',icon:'❄️',moveMod:.50,incomeMod:.90,winterTerrain:['tundra','mountain','forest'],desc:'Snow slows armies in harsh terrain'},
   {name:'Spring',icon:'🌸',moveMod:1.0,incomeMod:1.0,desc:'Normal conditions'},
@@ -73,22 +72,7 @@ const SEASONS=[
   {name:'Winter',icon:'❄️',moveMod:.40,incomeMod:.85,winterTerrain:['tundra','mountain','forest','plains'],desc:'Severe winter'},
 ];
 function getSeason(month){return SEASONS[month]||SEASONS[0];}
-
-// ── NATIONS ───────────────────────────────────────────────
-const NATIONS=[
-  {id:0, name:'Third Reich',      short:'Reich',   color:'#5c3c1a',ideology:'nazism',      capital:30},
-  {id:1, name:'Soviet Union',     short:'USSR',    color:'#4a1a1a',ideology:'stalinism',   capital:54},
-  {id:2, name:'French Republic',  short:'France',  color:'#1e2e52',ideology:'democracy',   capital:12},
-  {id:3, name:'United Kingdom',   short:'Britain', color:'#1c3a2a',ideology:'monarchy',    capital:22},
-  {id:4, name:'Kingdom of Italy', short:'Italy',   color:'#3e2c0a',ideology:'fascism',     capital:42},
-  {id:5, name:'Kingdom of Spain', short:'Spain',   color:'#3c1c1c',ideology:'fascism',     capital:6},
-  {id:6, name:'Polish Republic',  short:'Poland',  color:'#3a1a1a',ideology:'nationalism', capital:64},
-  {id:7, name:'Romania',          short:'Romania', color:'#2e2212',ideology:'monarchy',    capital:75},
-  {id:8, name:'Hungary',          short:'Hungary', color:'#2e1e0e',ideology:'fascism',     capital:61},
-  {id:9, name:'Turkey',           short:'Turkey',  color:'#1e2a1a',ideology:'nationalism', capital:90},
-  {id:10,name:'Yugoslavia',       short:'Yugosl.', color:'#222a1a',ideology:'monarchy',    capital:79},
-  {id:11,name:'Sweden',           short:'Sweden',  color:'#1a2c3a',ideology:'democracy',   capital:34},
-  {id:12,name:'Finland',          short:'Finland', color:'#2a322e',ideology:'democracy',   capital:37},
+function getSeason(month){return SEASONS[month]||SEASONS[0];}
 
 // ── NAVAL ZONES ─────────────────────────────────────────
 const NAVAL_ZONES={

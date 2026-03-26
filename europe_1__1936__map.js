@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════
-// europe_1__1936__map.js
-// Time of Conquest 1936 — Province & Nation Data
-// Generated from map editor. Re-export to update.
+// europe_1__1936__map.js — Time of Conquest 1936
+// Province & nation data. Re-export from map editor to update.
+// Load order: this file → info.js → game.js
 // ═══════════════════════════════════════════════════════
 
 const NATIONS=[
@@ -41,10 +41,9 @@ const INIT_ALLIANCES=[
 ];
 
 
-// ── PROVINCES ──────────────────────────────────────────
 // Resources: {oil,coal,grain,steel} 0-3
-// terrainMap: {hexIdx: terrainType} — set by map editor
-  {id:0, name:'Biarritz', short:'Biarritz', cx:127, cy:336, nation:2, terrain:'plains', isCoastal:true},
+
+const PROVINCES = [
   {id:1, name:'Cambo-les-Bains', short:'CLB', cx:131, cy:343, nation:2, terrain:'plains'},
   {id:2, name:'Saint-Jean-Pied-de-Port', short:'SJPP', cx:139, cy:343, nation:2, terrain:'plains'},
   {id:3, name:'Argelès-Gazost', short:'AG', cx:143, cy:350, nation:2, terrain:'plains'},
@@ -1742,9 +1741,3 @@ const INIT_ALLIANCES=[
   {id:1695, name:'0', short:'0', cx:373, cy:82, nation:25, terrain:'plains'},
   {id:1696, name:'0', short:'0', cx:390, cy:82, nation:25, terrain:'plains'}
 ];
-
-// NB adjacency is auto-rebuilt by computeHexRadius() in game.js
-// Do not edit manually.
-const NB=[];
-
-const LAND=PROVINCES.filter(p=>!p.isSea);
