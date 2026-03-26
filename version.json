@@ -6,6 +6,6 @@
     "PATCH — bugfixes, UI tweaks, balance changes",
     "YYMMDD — build date"
   ],
-  "version": "0.8.6-260319",
-  "changelog": "assimilation cost scales with province pop/2 for 48w base; cost curve normalized per province; pop passed through slider oninput and startAssim"
+  "version": "0.9.0-260326",
+  "changelog": "none"
 }
